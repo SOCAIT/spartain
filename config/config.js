@@ -42,14 +42,14 @@ var backend_url_payments = "https://demo.entangle-app.com/payments/";
 //    backend_url_neo4j= process.env.REACT_APP_BACKEND_URL_EXODIA_GRAPH
 // }
 
-backend_url_exodia= "https://d0ac-31-216-76-175.ngrok-free.app/api/";
+backend_url_exodia= "https://8930-31-216-76-175.ngrok-free.app/api/";
 
 
 // var backend_url= "http://192.168.1.6:3001/";
 
 var backend_url = "https://socait.com:80/"
 
-backend_url = "https://82d9-31-216-76-175.ngrok-free.app/api/"
+backend_url = "https://8930-31-216-76-175.ngrok-free.app/api/"
 
 // backend_url ="http://34.102.246.190:80/api/"
 //token

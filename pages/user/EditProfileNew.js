@@ -4,7 +4,7 @@ import Icon from 'react-native-vector-icons/FontAwesome5';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import { Picker } from '@react-native-picker/picker';
+import {Picker} from '@react-native-picker/picker';
 import { COLORS } from '../../constants';
 import ArrowHeaderNew from '../../components/ArrowHeaderNew';
 import { useNavigation } from '@react-navigation/native';
@@ -180,7 +180,6 @@ export default function EditProfileScreen({route}) {
               <Picker.Item label="Male" value="Male"  style={styles.pickerItem}/>
               <Picker.Item label="Other" value="Other"  style={styles.pickerItem}/>
 
-              {/* Add more gender options as needed */}
             </Picker>
           </View>
         </View>
@@ -202,7 +201,6 @@ export default function EditProfileScreen({route}) {
               <Picker.Item label="Fat Loss" value="Fat Loss" />
               <Picker.Item label="Maintenance" value="Maintenance" />
               <Picker.Item label="Endurance" value="Endurance" />
-              {/* Add more goal options as needed */}
             </Picker>
           </View>
          </View>

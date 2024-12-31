@@ -68,7 +68,7 @@ function App(): React.JSX.Element {
       'Authorization': 'Bearer ' + token
     }}).then((response) =>{
       console.log(response) 
-      setSoon(false) 
+      // setSoon(false) 
   
       if (response.data.detail){
         console.log("error in auth")
@@ -76,8 +76,7 @@ function App(): React.JSX.Element {
       }
       else {   
         console.log("authorized" + response.data)
-        setAuthState({username: response.data.username, id: response.data.id,status:true,
-           })
+        setAuthState({username: response.data.username, id: response.data.id,status:true , profile_photo:response.data.profile_photo})
         console.log(authState) 
       }
    }) 
