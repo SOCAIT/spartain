@@ -49,7 +49,7 @@ backend_url_exodia= "https://d0ac-31-216-76-175.ngrok-free.app/api/";
 
 var backend_url = "https://socait.com:80/"
 
-backend_url = "https://b928-31-216-76-175.ngrok-free.app/api/"
+backend_url = "https://82d9-31-216-76-175.ngrok-free.app/api/"
 
 // backend_url ="http://34.102.246.190:80/api/"
 //token

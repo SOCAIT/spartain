@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, Modal, View, FlatList } from 'react-native';
-import { Icon } from '@rneui/themed';
 import { COLORS, SIZES } from '../constants';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
@@ -70,7 +69,7 @@ const PlanDropdown = ({ label, data, onSelect }) => {
     >
       {renderDropdown()}
       <Text style={styles.buttonText}>{selected.label ? selected.label!=="" : "Awesome Plan"}</Text>
-      <Icon type='ionicon' name='chevron-down' color={COLORS.white} />
+      {/* <Icon type='ionicon' name='chevron-down' color={COLORS.white} /> */}
     </TouchableOpacity>
   );
 };

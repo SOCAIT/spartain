@@ -1,5 +1,5 @@
 import React, {useEffect, useState,useContext} from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import FitnessScore from '../../components/scores/FitnessScore';
@@ -93,7 +93,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1C1C1E',
-    paddingHorizontal: 15,
+    paddingHorizontal: Platform.OS === 'ios' ? 20 : 16,
+    paddingTop: Platform.OS === 'ios' ? 30 : 0
+
+
   },
   header: {
     flexDirection: 'row',

@@ -2,11 +2,10 @@ import React from 'react'
 
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs'
 
-import { StyleSheet,Modal, AppRegistry, Text, View, TextInput , ScrollView,FlatList,Platform} from 'react-native';
+import { StyleSheet,Modal, AppRegistry, Text,FlatList,Platform} from 'react-native';
 import {NavigationContainer, DefaultTheme} from '@react-navigation/native';
  
 
-import ChatModal from '../pages/chat/ChatModal';
 import TabIcon from '../components/TabIcon';
 import Soon from '../pages/Soon';
 import Program from '../pages/Program/Program';
@@ -125,6 +124,7 @@ const Tabs = () => {
                   backgroundColor: COLORS.primary,
                   borderTopColor: "transparent",
                   height: 60,
+                  padding: Platform.OS=== 'ios' ? 25 : 0
                   // borderTopLeftRadius:5,
                   // borderTopRightRadius: 5
                   

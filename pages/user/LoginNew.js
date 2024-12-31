@@ -10,7 +10,7 @@ import { backend_url } from '../../config/config';
 import { COLORS, SIZES, FONTS } from "../../constants"
 // import { Icon } from "@rneui/themed";
 import { useForm, Controller } from 'react-hook-form'
-//import { save } from '../../helpers/Storage'
+import { save } from '../../helpers/Storage'
 // import SocialAuthentication from '../../components/authentication/SocialAuthentication';
 
 
@@ -64,7 +64,7 @@ export default function SignInScreen({navigation}) {
         console.log(response.data)
 
         
-        //save("accessToken", response.data.access)
+        save("accessToken", response.data.access)
         auth({ token: response.data.access })
         navigation.reset({
           index: 0,

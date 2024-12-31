@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import ArrowHeader from '../../components/ArrowHeader';
 import { AuthContext } from '../../helpers/AuthContext';
 import { COLORS, FONTS, SIZES } from '../../constants';
-import Carousel from 'react-native-snap-carousel';
+// import Carousel from 'react-native-snap-carousel';
 
 const renderCarouselItem = ({ item }) => (
     <Image source={{ uri: item }} style={styles.carouselImage} />
@@ -20,7 +20,7 @@ const ItemDetails = ({ route }) => {
             <View style={styles.mapSnippet}>
                 <Text style={styles.mapText}>Map Snippet</Text>
             </View>
-            <View style={styles.detailsCard}>
+            {/* <View style={styles.detailsCard}>
                 <Carousel
                 data={item.images}
                 renderItem={renderCarouselItem}
@@ -34,16 +34,14 @@ const ItemDetails = ({ route }) => {
                 <Text style={styles.detailsDescription}>{item.description}</Text>
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity style={styles.button} onPress={() => Linking.openURL(item.link)}>
-                    {/* <Ionicons name="ios-navigate" size={20} color="#fff" /> */}
                     <Text style={styles.buttonText}> Directions</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.button} onPress={() => Linking.openURL('tel:+1234567890')}>
-                    {/* <Ionicons name="ios-call" size={20} color="#fff" /> */}
                     <Text style={styles.buttonText}> Call</Text>
                     </TouchableOpacity>
                 </View>
                 </View>
-            </View>
+            </View> */}
         </ScrollView>
       </View>
 

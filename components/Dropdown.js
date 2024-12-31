@@ -1,6 +1,5 @@
 import React, { FC, useState, useRef} from 'react';
 import { StyleSheet, Text, TouchableOpacity,TouchableWithoutFeedback,  Modal, View, FlatList} from 'react-native';
-import {  Button, Icon} from '@rneui/themed';
 
 import { COLORS, SIZES, FONTS } from '../constants';
 
@@ -85,7 +84,7 @@ const [selected, setSelected] = useState(data[0]);
     >
       {renderDropdown()}
       <Text style={styles.buttonText}>{selected.label}</Text>
-      <Icon type='ionicon' name='chevron-down' color={COLORS.white}/>
+      {/* <Icon type='ionicon' name='chevron-down' color={COLORS.white}/> */}
     </TouchableOpacity>
   );
 }
