@@ -21,14 +21,12 @@ import { COLORS, SIZES, FONTS } from '../../constants';
 
 
 
-import { useDatabase } from '../../db/DatabaseContext';
 import ChatbotScreen from './ChatbotScreen';
 
 const ChatModal = () => {
 
   const [messages, setMessages] = useState([]);
 
-  const database = useDatabase();
 
   
   useEffect(() => {

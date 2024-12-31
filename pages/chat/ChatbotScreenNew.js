@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Modal, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { COLORS } from '../../constants';
@@ -147,6 +147,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1C1C1E',
+    paddingTop: Platform.OS === 'ios' ? 35 : 16,
+    // paddingHorizontal: Platform.OS === 'ios' ? 25 : 16,
   },
   header: {
     flexDirection: 'row',
@@ -172,7 +174,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   messageList: {
-    paddingHorizontal: 20,
+    paddingHorizontal: Platform.OS === 'ios' ? 35 : 20,
     flex: 1,
   },
   messageContainer: {
@@ -225,7 +227,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
+    padding: Platform.OS ==='ios' ? 10: 10,
     backgroundColor: '#333',
     borderTopWidth: 1,
     borderTopColor: '#444',
@@ -236,6 +238,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     backgroundColor: '#1C1C1E',
     borderRadius: 20,
+    padding: Platform.OS ==='ios' ? 15: 0,
+
   },
   sendButton: {
     marginLeft: 10,

@@ -57,32 +57,32 @@ function App(): React.JSX.Element {
    useEffect(() => {
     //loadDataCallback();
   
-    //getValueFor("accessToken",setToken)
+    getValueFor("accessToken",setToken)
 
     test_api()
 
     console.log(authState)
     console.log(token)
-  //   axios.get(backend_url +"auth/auth/",
-  //   {headers:{ 
-  //     'Authorization': 'Bearer ' + token
-  //   }}).then((response) =>{
-  //     console.log(response) 
-  //     setSoon(false) 
+    axios.get(backend_url +"auth/auth/",
+    {headers:{ 
+      'Authorization': 'Bearer ' + token
+    }}).then((response) =>{
+      console.log(response) 
+      setSoon(false) 
   
-  //     if (response.data.detail){
-  //       console.log("error in auth")
-  //       setAuthState({username:"",id:0, status:false, profile_photo:""})
-  //     }
-  //     else {   
-  //       console.log("authorized" + response.data)
-  //       setAuthState({username: response.data.username, id: response.data.id,status:true,
-  //          })
-  //       console.log(authState) 
-  //     }
-  //  }) 
+      if (response.data.detail){
+        console.log("error in auth")
+        setAuthState({username:"",id:0, status:false, profile_photo:""})
+      }
+      else {   
+        console.log("authorized" + response.data)
+        setAuthState({username: response.data.username, id: response.data.id,status:true,
+           })
+        console.log(authState) 
+      }
+   }) 
    
-  //  console.log(authState)
+   console.log(authState)
   }, []);
 
   return (
@@ -116,10 +116,10 @@ function App(): React.JSX.Element {
         <Stack.Screen name="Chat" component={Home} />
         <Stack.Screen name='Signup'  component={SignUpScreen} />
         <Stack.Screen name='Login'  component={SignInScreen} />
-        {/*
+        
          <Stack.Screen name="Tabs" component={Tabs} />
 
-         <Stack.Screen name="Test" component={CustomDrawer} /> */}
+        {/* <Stack.Screen name="Test" component={CustomDrawer} /> */}
         </Stack.Navigator>
  </NavigationContainer>
     </AuthContext.Provider>
