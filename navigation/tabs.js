@@ -41,12 +41,17 @@ const Tabs = () => {
     return (
          <NavigationContainer independent={true} theme={MyTheme}>  
         <Tab.Navigator
-         tabBarOptions={{
-          style: {
-              backgroundColor: COLORS.primary,
-              //borderTopColor: "transparent",
-          }
-         }}
+           initialRouteName="Chat"
+        //  tabBarOptions={{
+        //   style: {
+        //       backgroundColor: COLORS.primary,
+        //       padding: Platform.OS=== 'ios' ? 25 : 0,
+        //       // height: 60,
+        //       // marginBottom: 10
+
+        //       //borderTopColor: "transparent",
+        //   }
+        //  }}
 
         screenOptions={
         
@@ -123,7 +128,7 @@ const Tabs = () => {
               {
                   backgroundColor: COLORS.primary,
                   borderTopColor: "transparent",
-                  height: 60,
+                  height: 80,
                   padding: Platform.OS=== 'ios' ? 25 : 0
                   // borderTopLeftRadius:5,
                   // borderTopRightRadius: 5
@@ -142,10 +147,11 @@ const Tabs = () => {
         }
         >
             <Tab.Screen name="Profile" component={ProfileStack} />
-            <Tab.Screen name="Program" component={Program} />
             <Tab.Screen name="Chat" component={AIStack} />
+
+            <Tab.Screen name="Program" component={Program} />
             <Tab.Screen name="Nutrition" component={NutritionStack} />
-            <Tab.Screen name="Soon" component={SettingsStack} />
+            {/* <Tab.Screen name="Soon" component={SettingsStack} /> */}
 
 
 

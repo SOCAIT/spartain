@@ -51,7 +51,7 @@ const PlanDropdown = ({ label, data, onSelect }) => {
 
   const renderItem = ({ item }) => (
     <TouchableOpacity style={styles.item} onPress={() => onItemPress(item)}>
-      <Text style={styles.buttonText}>{item.label ? item.label!=="" : "Awesome Plan"}</Text>
+      <Text style={styles.buttonText}>{item.label ? (item.label!=="" ? item.label : "Awesome Plan") : "Awesome Plan" }</Text>
     </TouchableOpacity>
   );
 
@@ -60,7 +60,7 @@ const PlanDropdown = ({ label, data, onSelect }) => {
     onSelect(item.value); // Ensure only the value is passed to the parent
     setVisible(false);
   };
-
+ 
   return (
     <TouchableOpacity
       style={styles.button}
@@ -68,8 +68,8 @@ const PlanDropdown = ({ label, data, onSelect }) => {
       ref={DropdownButton}
     >
       {renderDropdown()}
-      <Text style={styles.buttonText}>{selected.label ? selected.label!=="" : "Awesome Plan"}</Text>
-      {/* <Icon type='ionicon' name='chevron-down' color={COLORS.white} /> */}
+      <Text style={styles.buttonText}>{selected.label ? (selected.label!=="" ? selected.label : "Awesome Plan") : "Awesome Plan"}</Text>
+      <MaterialIcons name="expand-more" size={30} color="#FF6A00" style={{marginTop:5}} />
     </TouchableOpacity>
   );
 };

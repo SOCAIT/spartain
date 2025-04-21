@@ -1,48 +1,42 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity} from 'react-native';
+import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
+import { View, Image, ScrollView, StyleSheet, Platform } from 'react-native';
 import axios from 'axios';
-
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 import { COLORS } from '../../constants';
 import { backend_url } from '../../config/config';
-import ArrowHeader from '../../components/ArrowHeader';
+import ArrowHeaderNew from '../../components/ArrowHeaderNew';
 import InstructionsModal from '../../components/modals/InstructionModal';
 import ExerciseHistory from '../../components/exercises/ExerciseHistory';
 import ButtonRow from '../../components/buttons/ButtonRow';
-
 import { AuthContext } from '../../helpers/AuthContext';
 import ExerciseLogModal from '../../components/modals/ExerciseLogModal';
 import LatestLog from '../../components/exercises/LatestLog';
-import ArrowHeaderNew from '../../components/ArrowHeaderNew';
 
 // Helper function to get an array of the last 6 months in "YYYY-MM" format
 const getLastSixMonths = () => {
   const months = [];
   const currentDate = new Date();
-
   for (let i = 0; i < 6; i++) {
     const year = currentDate.getFullYear();
-    const month = (currentDate.getMonth() + 1).toString().padStart(2, '0'); // Ensure month is in "MM" format
+    const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
     months.unshift(`${year}-${month}`);
-    currentDate.setMonth(currentDate.getMonth() - 1); // Move to the previous month
+    currentDate.setMonth(currentDate.getMonth() - 1);
   }
-
   return months;
 };
 
-// Generate the last 6 months
 const lastSixMonths = getLastSixMonths();
 
-// Create the dummy data using the last 6 months
+// Initial dummy data
 const dummyData = {
-  "average_weight": {
+  average_weight: {
     "12+ reps": Object.fromEntries(lastSixMonths.map(month => [month, 0])),
     "4-5 reps": Object.fromEntries(lastSixMonths.map(month => [month, 0])),
     "6-8 reps": Object.fromEntries(lastSixMonths.map(month => [month, 0])),
     "9-12 reps": Object.fromEntries(lastSixMonths.map(month => [month, 0]))
   },
-  "max_weight": {
+  max_weight: {
     "4-5 reps": 0,
     "6-8 reps": 0,
     "9-12 reps": 0,
@@ -50,156 +44,157 @@ const dummyData = {
   }
 };
 
-
-// const dummyData = {
-//   "average_weight":{
-//     "12+ reps": {
-//       "2024-01": 0,
-//       "2024-02": 0,
-//       "2024-03": 0,
-//       "2024-04": 0,
-//       "2024-05": 0,
-//       "2024-06": 0
-//     },
-//     "4-5 reps": {
-//       "2024-01": 0,
-//       "2024-02": 0,
-//       "2024-03": 0,
-//       "2024-04": 0,
-//       "2024-05": 0,
-//       "2024-06": 0
-//     },
-//     "6-8 reps": {
-//       "2024-01": 0,
-//       "2024-02": 0,
-//       "2024-03": 0,
-//       "2024-04": 0,
-//       "2024-05": 0,
-//       "2024-06": 0
-//     },
-//     "9-12 reps": {
-//       "2024-01": 0,
-//       "2024-02": 0,
-//       "2024-03": 0,
-//       "2024-04": 0,
-//       "2024-05": 0,
-//       "2024-06": 0
-//     }
-// },
-// "max_weight": {
-//   "4-5 reps": 0,
-//   "6-8 reps": 0,
-//   "9-12 reps": 0,
-//   "12+ reps": 0,
-// }
-// };
-
-
-
 const ExerciseDetailsScreen = ({ route }) => {
   const { exercise } = route.params;
   const navigation = useNavigation();
-  const {authState} = useContext(AuthContext)
-
+  const { authState } = useContext(AuthContext);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [updateLogModalVisible, setUpdateLogModalVisible] = useState(false);
+  // Use the dummy data as initial state
+  const [exerciseHistory, setExerciseHistory] = useState(dummyData.average_weight);
+  const [latestLogs, setLatestLogs] = useState(dummyData.max_weight);
+  // A refresh key to force re-render of child components when data updates
+  const [refreshKey, setRefreshKey] = useState(0);
 
+  // // GraphQL query string
+  // const graphql_user_ex_logs = {
+  //   query: `
+  //     query {
+  //       userExlogsByName(userId: ${authState.id}, exerciseName: "${exercise.name}")
+  //     }
+  //   `
+  // };
 
-  const [exerciseHistory, setExerciseHistory] = useState(dummyData['average_weight']);
-  const [latestLogs, setLatestLogs] = useState(dummyData['max_weight']);
+  const graphql_user_ex_logs = useMemo(() => ({
+    query: `
+      query {
+        userExlogsByName(userId: ${authState.id}, exerciseName: "${exercise.name}")
+      }
+    `
+  }), [authState.id, exercise.name]);
 
+  // // Function to fetch data from backend
+  // const fetchExerciseData = useCallback(() => {
+  //   axios.post(backend_url + 'graphql/', graphql_user_ex_logs)
+  //     .then(response => {
+  //       // Parse the JSON string into an object
+  //       const data = JSON.parse(response.data.data.userExlogsByName);
+  //       console.log('Fetched exercise data:', data);
+  //       // For a complete refresh, replace the states directly:
+  //       if (data.average_weight && data.max_weight) {
+  //         setExerciseHistory(data.average_weight);
+  //         setLatestLogs(data.max_weight);
+  //         // Update the key to force a re-render of components that may cache props
+  //         setRefreshKey(prevKey => prevKey + 1);
+  //       }
+  //     })
+  //     .catch(error => {
+  //       console.error('Error fetching exercise history:', error);
+  //     });
+  // }, [authState.id, exercise.name]);
 
-
-  const graphql_user_ex_logs = { query: " \
-  query { \ " +
-  "userExlogsByName(userId:" + authState.id +", exerciseName: \"" + exercise.name + "\") }"      
-  }
-
-  
-
-  const buttons = [
-    { title: 'Instructions',  onPress:() => setModalVisible(true), 
-      style: {backgroundColor: COLORS.primary,
-      paddingVertical: 10,
-      paddingHorizontal: 15,
-      borderRadius: 5,
-      marginHorizontal:5} },
-    { title: 'Add Exercise Log', onPress: () =>  setUpdateLogModalVisible(true),   
-      style: {backgroundColor: COLORS.darkOrange,
-      paddingVertical: 10,
-      paddingHorizontal: 15,
-      borderRadius: 5,
-      marginHorizontal:5} },
-    // { title: 'Similar', onPress: () => console.log('Button 3 pressed') },
-  ];
- 
-  useEffect(() => {
-    // console.log(exercise.description.split(":"))
-    // console.log(authState.id)
-    // console.log(exerciseHistory)
-    // Fetch exercise history from the backend using Axios
+  const fetchExerciseData = useCallback(() => {
     axios.post(backend_url + 'graphql/', graphql_user_ex_logs)
       .then(response => {
-        // Assuming the response contains an array of exercise history objects
-
-        console.log(response.data.data)
-      
-
-        // Parse the JSON string into a JavaScript object
         const data = JSON.parse(response.data.data.userExlogsByName);
-
-           
-
-        // Accessing values
-        // const reps12Plus = data["12+ reps"]["2024-04"];
-        // const reps4to5 = data["4-5 reps"]["2024-04"];
-        // const reps6to8 = data["6-8 reps"]["2024-04"];
-        // const reps9to12 = data["9-12 reps"]["2024-04"];
-        // setExerciseHistory(data['average_weight']);
-
-        // Step 2: Update `exerciseHistory` while keeping previous records
-        setExerciseHistory(prevHistory => ({
-          ...prevHistory,
-          ...Object.keys(data.average_weight || {}).reduce((acc, key) => {
-            acc[key] = {
-              ...prevHistory[key], // Keep existing sub-records for each rep range
-              ...data.average_weight[key] // Merge new sub-records
-            };
-            return acc;
-          }, {})
-        }));
-
-        // Step 3: Update `latestLogs` while keeping previous records
-        setLatestLogs(prevLogs => ({
-          ...prevLogs,
-          ...data.max_weight // Merge new data into `max_weight`
-        }));
-
+        if (data) {
+          // Merge data with dummy values for exerciseHistory (average_weight)
+          const updatedHistory = {};
+          Object.keys(dummyData.average_weight).forEach(repRange => {
+            updatedHistory[repRange] = {};
+            Object.keys(dummyData.average_weight[repRange]).forEach(month => {
+              updatedHistory[repRange][month] =
+                data.average_weight &&
+                data.average_weight[repRange] &&
+                data.average_weight[repRange][month] !== undefined
+                  ? data.average_weight[repRange][month]
+                  : dummyData.average_weight[repRange][month];
+            });
+          });
+  
+          // Merge data with dummy values for latestLogs (max_weight)
+          const updatedLatest = {};
+          Object.keys(dummyData.max_weight).forEach(repRange => {
+            updatedLatest[repRange] =
+              data.max_weight &&
+              data.max_weight[repRange] !== undefined
+                ? data.max_weight[repRange]
+                : dummyData.max_weight[repRange];
+          });
+  
+          // Only update if the new data differs from the current state
+          if (JSON.stringify(updatedHistory) !== JSON.stringify(exerciseHistory)) {
+            setExerciseHistory(updatedHistory);
+          }
+          if (JSON.stringify(updatedLatest) !== JSON.stringify(latestLogs)) {
+            setLatestLogs(updatedLatest);
+          }
+          // Optionally update refreshKey only if needed
+          setRefreshKey(prevKey => prevKey + 1);
+        }
       })
       .catch(error => {
         console.error('Error fetching exercise history:', error);
       });
-  }, []); // Empty dependency array to fetch data only once when the component mounts
+  }, [graphql_user_ex_logs, exerciseHistory, latestLogs]);
+
+ 
+
+  // Initial data fetch on component mount
+  useEffect(() => {
+    fetchExerciseData();
+  }, [fetchExerciseData]);
+
+  // Re-fetch data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchExerciseData();
+    }, [fetchExerciseData])
+  );
+
+  // Callback for when the ExerciseLogModal closes
+  const handleLogModalClose = () => {
+    setUpdateLogModalVisible(false);
+    fetchExerciseData(); // Refresh data immediately
+  };
+
+  const buttons = [
+    { 
+      title: 'Instructions',  
+      onPress: () => setModalVisible(true), 
+      style: {
+        backgroundColor: COLORS.primary,
+        paddingVertical: 10,
+        paddingHorizontal: 15,
+        borderRadius: 5,
+        marginHorizontal: 5
+      } 
+    },
+    { 
+      title: 'Add Exercise Log', 
+      onPress: () => setUpdateLogModalVisible(true),   
+      style: {
+        backgroundColor: COLORS.darkOrange,
+        paddingVertical: 10,
+        paddingHorizontal: 15,
+        borderRadius: 5,
+        marginHorizontal: 5
+      } 
+    }
+  ];
 
   return (
     <View style={styles.container}>
-      {/* <ArrowHeader navigation={navigation} title={exercise.name} />  */}
-      <ArrowHeaderNew  navigation={navigation}  />
+      <ArrowHeaderNew navigation={navigation} title={exercise.name}/>
       <ScrollView contentContainerStyle={{ alignItems: 'center' }}> 
-      {/* <Text style={styles.header}>{exercise.name}</Text> */}
-      <View style={styles.imageContainer}>
-        <Image source={{ uri: exercise.gif }} style={styles.gifImage} />
-      </View>
-      {/* <Text style={styles.historyHeader}>Instructions</Text> */}
-
-      <ButtonRow buttons={buttons} />
-     
-      <LatestLog exercise={exercise} data={latestLogs} />
-
-      <ExerciseHistory history={exerciseHistory} />
-
-      
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: exercise.gif }} style={styles.gifImage} />
+        </View>
+        <ButtonRow buttons={buttons} />
+        {/* Passing refreshKey as key forces a re-render when data changes */}
+        <LatestLog key={`latest-${refreshKey}`} exercise={exercise} data={latestLogs} />
+        <ExerciseHistory key={`history-${refreshKey}`} history={exerciseHistory} />
       </ScrollView>
 
       <InstructionsModal
@@ -208,13 +203,11 @@ const ExerciseDetailsScreen = ({ route }) => {
         instructions={exercise.description}
       />
 
-      
-      {/* ExerciseLogModal Component */}
       <ExerciseLogModal 
         exerciseName={exercise.name}
         user={authState.id}
         visible={updateLogModalVisible} 
-        onClose={() => setUpdateLogModalVisible(false)} 
+        onClose={handleLogModalClose} 
       />
     </View>
   );
@@ -224,7 +217,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.dark,
-    padding: 10,
+     paddingTop: Platform.OS === 'ios' ? 45 :0,
+     paddingHorizontal: Platform.OS === 'ios' ? 20 :0
     //alignItems: 'center',
   },
   body:{

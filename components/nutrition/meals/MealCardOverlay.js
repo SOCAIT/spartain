@@ -5,24 +5,22 @@ import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 const daysOfWeek = [ 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const MealCardOverlay = ({ meal, navigation}) => {
+  console.log(meal)
 
   const viewWorkout = () => {
-    navigation.navigate("WorkoutView", { meal});
+    navigation.navigate("MealView", { meal: meal.meal});
   };
 
 
 
-
-
   return (
-    <ImageBackground
-    source={meal.meal.name} // Replace with the actual workout background image URL workout.image, { uri: 'https://via.placeholder.com/150'}
+    <View//<ImageBackground
+    //source={meal.meal.name} // Replace with the actual workout background image URL workout.image, { uri: 'https://via.placeholder.com/150'}
     style={styles.card}
-    imageStyle={styles.cardImage}
+    //imageStyle={styles.cardImage}
   >
     <View style={styles.workoutOverlay}>
       <Text style={styles.workoutTitle}>{meal.meal.name}</Text>
-      <Text style={styles.workoutInfo}>8 Series Workout - Intense</Text>
       <View style={styles.workoutMetrics}>
         {/* <Text style={styles.workoutMetric}>{meal.time}min</Text> */}
         <Text style={styles.workoutMetric}>{meal.meal.calories}kcal</Text>
@@ -31,7 +29,7 @@ const MealCardOverlay = ({ meal, navigation}) => {
         <MaterialIcons name="chevron-right" size={24} color="#FFF" />
       </TouchableOpacity>
     </View>
-  </ImageBackground>
+  </View> //</ImageBackground>
   )
 } 
 

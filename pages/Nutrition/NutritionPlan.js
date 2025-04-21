@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Image, Alert, Platform } from 'react-native';
 import Dropdown from '../../components/Dropdown';
 import IconHeader from '../../components/IconHeader';
 import { COLORS } from '../../constants';
@@ -12,16 +12,64 @@ import CustomCarousel from '../../components/CustomCarousel';
 import CardOverlay from '../../components/workouts/CardOverlay';
 import MealCardOverlay from '../../components/nutrition/meals/MealCardOverlay';
 import NutritionPlanDropdown from '../../components/NutritionPlanDropdown';
+import SearchInput from '../../components/inputs/SearchInput';
+import { set } from 'react-hook-form';
+import { useFocusEffect } from '@react-navigation/native';
+import OptionModal from '../../components/buttons/OptionModal';
+import NutritionSummary from '../../components/nutrition/NutritionSummary';
+import DaySelector from '../../components/DaySelector';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const NutritionPlan = ({ navigation }) => {
-  const [selectedDay, setSelectedDay] = useState('Mon');
+const getTargetNutrition = (targetNutritionObj) => {
+
+  const targetNutrition = {
+    calories: targetNutritionObj.target_calories || 0 ,
+    carbs: targetNutritionObj.target_carbs || 0,
+    proteins: targetNutritionObj.target_protein || 0,
+    fats: targetNutritionObj.target_fats || 0,
+  };
+  return targetNutrition;
+}
+
+const NutritionPlan = ({ navigation, route }) => {
+  const today = new Date().getDate();
+  const [selectedDay, setSelectedDay] = useState(today);
   const { authState } = useContext(AuthContext);
   const [nutritionPlansData, setNutritionPlansData] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [selectedMealPlan, setSelectedMealPlan] = useState(null);
   const [isLoading, setIsLoading] = useState(true)
+  const [modalVisible, setModalVisible] = useState(false);
+  const [targetNutrition, setTargetNutrition] = useState(getTargetNutrition(authState.target_nutrition_data));
+
+  const [mealSearchResults, setMealSearchResults] = useState([]);
+
+  const options = [
+    {iconType: 'Ionicons', iconName: 'add-circle-outline', label: 'Add plan', onPress: () => navigation.navigate('AddModifyPlan') },
+    // { iconType: 'MaterialCommunityIcons',iconName: 'file-edit-outline', label: 'Update current plan',onPress:() => navigation.navigate('UpdateWorkoutPlan', { workoutPlan: selectedWorkoutPlan })},
+
+    { iconType: 'MaterialCommunityIcons',iconName: 'brain', label: 'ask AI for plan', onPress: () => navigation.navigate('AINutritionPlan') },
+    // { iconType: 'Ionicons',iconName: 'information-circle-outline', label: 'Tips', onPress: () => navigation.navigate('TipsScreen') },
+  ];
+
+  // NEW: State for current nutrition (starts at 0 for a new day)
+  const [currentNutrition, setCurrentNutrition] = useState({
+    calories: 0,
+    carbs: 0,
+    proteins: 0,
+    fats: 0,
+  });
+
+  // // NEW: Target nutrition values (could be dynamic)
+  // const targetNutrition = {
+  //   calories: 2558,
+  //   carbs: 263,
+  //   proteins: 185,
+  //   fats: 85,
+  // };
+
   
   const graphqlUserNutritionPlans = {
     query: `
@@ -79,7 +127,7 @@ const NutritionPlan = ({ navigation }) => {
          <MealCardOverlay  meal={meal} navigation={navigation}/>
       )
   }
-
+ 
   const fetchNutritionPlans = async () => {
     try {
       const response = await axios.post(`${backend_url}graphql/`, graphqlUserNutritionPlans);
@@ -112,6 +160,7 @@ const NutritionPlan = ({ navigation }) => {
  
   useEffect(() => {
     fetchNutritionPlans();
+    
   }, []);
 
   useEffect(() => {
@@ -128,10 +177,86 @@ const NutritionPlan = ({ navigation }) => {
     } 
   }, [selectedPlan, selectedDay, nutritionPlansData]);
 
+  // NEW: Update currentNutrition when returning from MealInputScreen
+  useFocusEffect(
+    React.useCallback(() => {
+      if (route.params && route.params.updatedNutrition) {
+        const update = route.params.updatedNutrition;
+        setCurrentNutrition(prev => ({
+          calories: prev.calories + (update.calories || 0),
+          carbs: prev.carbs + (update.carbs || 0),
+          proteins: prev.proteins + (update.proteins || 0),
+          fats: prev.fats + (update.fats || 0),
+        }));
+        navigation.setParams({ updatedNutrition: null });
+      }
+    }, [route.params])
+  );
+
+  
+  // Helper to get today's date as a string in YYYY-MM-DD format
+  const getTodayString = () => {
+    return new Date().toISOString().split('T')[0];
+  };
+
+  // Load stored nutrition data, and reset if a new day has started
+  useEffect(() => {
+    const loadNutritionData = async () => {
+      try {
+        const storedData = await AsyncStorage.getItem('@currentNutrition');
+        const todayStr = getTodayString();
+        if (storedData) {
+          const parsed = JSON.parse(storedData);
+          // If the stored date is today, load the nutrition values
+          if (parsed.date === todayStr) {
+            setCurrentNutrition(parsed.nutrition);
+          } else {
+            // New day: Reset nutrition data to 0 and update storage
+            const resetNutrition = { calories: 0, carbs: 0, proteins: 0, fats: 0 };
+            setCurrentNutrition(resetNutrition);
+            await AsyncStorage.setItem('@currentNutrition', JSON.stringify({ date: todayStr, nutrition: resetNutrition }));
+          }
+        } else {
+          // No stored data yet, initialize it for today
+          const resetNutrition = { calories: 0, carbs: 0, proteins: 0, fats: 0 };
+          setCurrentNutrition(resetNutrition);
+          await AsyncStorage.setItem('@currentNutrition', JSON.stringify({ date: todayStr, nutrition: resetNutrition }));
+        }
+      } catch (error) {
+        console.error('Error loading nutrition data:', error);
+        Alert.alert('Error', 'Could not load nutrition data.');
+      }
+    };
+
+    loadNutritionData();
+  }, []);
+
+  // Save nutrition data whenever currentNutrition state changes
+  useEffect(() => {
+    const saveNutritionData = async () => {
+      const todayStr = getTodayString();
+      try {
+        await AsyncStorage.setItem('@currentNutrition', JSON.stringify({ date: todayStr, nutrition: currentNutrition }));
+      } catch (error) {
+        console.error('Error saving nutrition data:', error);
+        Alert.alert('Error', 'Could not save nutrition data.');
+      }
+    };
+
+    saveNutritionData();
+  }, [currentNutrition]);
   const handleDayChange = (day) => {
     setSelectedDay(day);
-    // const mealPlanForDay = nutritionPlansData?.dailymealplanSet?.find(plan => plan.day === daysOfWeek.indexOf(day));
-    // setSelectedMealPlan(mealPlanForDay);
+    // Convert the selected day to the corresponding day of the week (0-6)
+    const dayOfWeek = new Date(new Date().getFullYear(), new Date().getMonth(), day).getDay();
+    
+    if (selectedPlan && nutritionPlansData.length > 0) {
+      const currentPlan = nutritionPlansData.find(plan => plan.value === selectedPlan);
+      if (currentPlan) {
+        const mealForDay = currentPlan.dailymealplanSet.find(mealPlanDay => parseInt(mealPlanDay.day, 10) === dayOfWeek);
+        setSelectedMealPlan(mealForDay);
+      }
+    }
   };
 
   const handlePlanChange = (planValue) => {
@@ -152,42 +277,90 @@ const NutritionPlan = ({ navigation }) => {
     }
   };
 
-  const renderMeal = (item) => (
-    <TouchableOpacity key={item.meal.id} style={styles.mealCard} onPress={() => navigation.navigate("MealView", { meal: item.meal })}>
-      <Image   source={item.meal.image ? { uri: item.meal.image } : 
-      ( item.meal.name==='Chicken Quinoa Salad' ? require('../../assets/images/chicken_quinoa.png'): require('../../assets/images/oat.webp'))}  
-      style={styles.mealImage} />
-      <View style={styles.mealInfo}>
-        <Text style={styles.mealName}>{item.meal.name}</Text>
-        <Text style={styles.mealDetails}>Calories: {item.meal.calories} kcal</Text>
-      </View>
-    </TouchableOpacity>
-  );
 
+  const searchMeals = (query) => {
+    if (query.length > 2) {
+      axios.get(`${backend_url}meal-search/?search=${query}`)
+        .then(response => {
+          setMealSearchResults(response.data);
+          // setIsModalVisible(true);
+        });
+    } else {
+      setMealSearchResults([]);
+      // setIsModalVisible(false);
+    }
+  };
+
+  const pressSearchItem = (item) => {
+    navigation.navigate("MealView", { meal: item });
+    setMealSearchResults([]);
+    
+
+  }
+
+  const renderSearchMealItem = ({ item }) => (
+      <TouchableOpacity style={styles.mealSearchItem} onPress={() => pressSearchItem(item)}>
+        <Image source={{ uri: item.image || 'https://via.placeholder.com/150' }} style={styles.mealImage} />
+        <View style={styles.mealInfo}>
+          <Text style={{ color: "#fff" }}>{item.name}</Text>
+          <Text style={{ color: "#fff" }}>Calories: {item.calories} kcal</Text>
+        </View>
+      </TouchableOpacity>
+    );
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <IconHeader />
+    // <ScrollView contentContainerStyle={styles.container}>
+     <View style={styles.container}>
+      {/* <IconHeader /> */}
+      <SearchInput placeholder="Search meals" search={searchMeals} 
+        results={mealSearchResults}
+        onSelect={pressSearchItem} renderSearchResultItem={renderSearchMealItem} />
 
-      <View style={styles.nutritionContainer}>
+        {/* 
+        NEW: Updated Nutrition Summary Card displaying current vs. target nutrition.
+        This replaces the previous calculation from selectedMealPlan.
+      */}
+      {/* <View style={styles.nutritionContainer}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' , marginBottom: 20 }}>
+          <Text style={styles.nutritionSummaryTitle}>Daily Nutrition Info</Text>
+
+          <TouchableOpacity style={styles.updateNutritionButton} onPress={() => navigation.navigate('NutritionInput')}>
+            <Text style={styles.updatedNutritionButtonText}>update info</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.nutritionSummary}>
-          <Text style={styles.nutritionValue}>{selectedMealPlan?.dailymealplandetailSet.reduce((sum, item) => sum + item.meal.calories, 0) || 0}</Text>
+          <Text style={styles.nutritionValue}>
+            {currentNutrition.calories} / {targetNutrition.calories}
+          </Text>
           <Text style={styles.nutritionLabel}>CALORIES</Text>
         </View>
         <View style={styles.nutritionDetails}>
           <View style={styles.nutritionDetailItem}>
-            <Text style={styles.nutritionDetailValue}>{selectedMealPlan?.dailymealplandetailSet.reduce((sum, item) => sum + parseFloat(item.meal.carbs), 0) || 0} g</Text>
+            <Text style={styles.nutritionDetailValue}>
+              {currentNutrition.carbs} g / {targetNutrition.carbs} g
+            </Text>
             <Text style={styles.nutritionDetailLabel}>Carbs</Text>
           </View>
           <View style={styles.nutritionDetailItem}>
-            <Text style={styles.nutritionDetailValue}>{selectedMealPlan?.dailymealplandetailSet.reduce((sum, item) => sum + parseFloat(item.meal.proteins), 0) || 0} g</Text>
+            <Text style={styles.nutritionDetailValue}>
+              {currentNutrition.proteins} g / {targetNutrition.proteins} g
+            </Text>
             <Text style={styles.nutritionDetailLabel}>Proteins</Text>
           </View>
           <View style={styles.nutritionDetailItem}>
-            <Text style={styles.nutritionDetailValue}>{selectedMealPlan?.dailymealplandetailSet.reduce((sum, item) => sum + parseFloat(item.meal.fats), 0) || 0} g</Text>
+            <Text style={styles.nutritionDetailValue}>
+              {currentNutrition.fats} g / {targetNutrition.fats} g
+            </Text>
             <Text style={styles.nutritionDetailLabel}>Fats</Text>
           </View>
         </View>
-      </View>
+        
+      </View> */}
+
+      <NutritionSummary targetNutrition={targetNutrition} currentNutrition={currentNutrition} navigation={navigation}/>
+
+    
+
+      <DaySelector selectedDay={selectedDay} onDaySelect={handleDayChange} />
 
       <Text style={styles.mealsTitle}>Your Nutrition Plans</Text>
       <View style={{ flexDirection: "row", padding: 10, alignItems:'center' }}>
@@ -201,66 +374,45 @@ const NutritionPlan = ({ navigation }) => {
           <Text style={{color: "#fff", marginRight:10}}>No Nutrition Plans yet</Text>
          )    
          }     
-         <IconButton name='add' onPress={() => navigation.navigate('AddModifyPlan')} />
+         <IconButton name='add' onPress={() => setModalVisible(true)} />
 
       </View>
 
        
-      <View style={styles.daySelector}>
-        {daysOfWeek.map((day) => (
-          <TouchableOpacity
-            key={day}
-            onPress={() => handleDayChange(day)}
-            style={[
-              styles.dayButton,
-              { backgroundColor: selectedDay === day ? 'lightblue' : 'white' },
-            ]}
-          >
-            <Text style={{ fontWeight: 'bold' }}>{day}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      
-
-      {/* <View style={{ flexDirection: "row", padding: 10, alignItems:'center' }}>
-        {nutritionPlansData.length > 0 ? (
-          <PlanDropdown label={"Change Nutrition Plan"} data={nutritionPlansData} onSelect={handlePlanChange} />
-        ) : (
-          // <Text style={{color: "#fff"}}>Loading nutritiont plans...</Text>
-          <Text style={{color: "#fff", marginRight:10}}>No Nutrition Plans yet</Text>
-        )}
-        <IconButton name='add' onPress={() => navigation.navigate('AddModifyPlan')} />
-      </View> */}
-
       <Text style={styles.mealsTitle}>Your Meals</Text>
       {/* {selectedMealPlan?.dailymealplandetailSet.map(renderMeal)} */}
 
-      <CustomCarousel items={selectedMealPlan?.dailymealplandetailSet} renderItem={renderMealCard}/>
+      <CustomCarousel items={selectedMealPlan?.dailymealplandetailSet} renderItem={renderMealCard} navigation={navigation}/>
       {/* <CustomCarousel items={dummy_meals} renderItem={renderMealCard}/> */}
 
 
-      {/* <View style={styles.bottomButtonContainer}>
-        <TouchableOpacity style={styles.bottomButton}>
-          <Text style={styles.bottomButtonText}>Meal Plan</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.bottomButton}>
-          <Text style={styles.bottomButtonText}>Recipes</Text>
-        </TouchableOpacity>
-      </View> */}
-    </ScrollView>
+      <OptionModal
+        isVisible={modalVisible}
+        options={options}
+        onClose={() => setModalVisible(false)}
+      />
+    </View>
+    // </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
+    flex: 1,
+    paddingTop: Platform.OS === 'ios' ? 30 : 10,
     backgroundColor: COLORS.dark,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 16,
+  },
+  nutritionSummaryTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 10,
+    alignContent: 'left', 
   },
   daySelector: {
     flexDirection: 'row',
@@ -277,7 +429,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.lightDark, //'#6ab04c',
     borderBottomLeftRadius: 50,
     borderBottomRightRadius: 50,
-    alignItems: 'center',
+    //alignItems: 'center',
     padding: 20,
     marginBottom: 20,
   },
@@ -360,6 +512,18 @@ const styles = StyleSheet.create({
   bottomButtonText: {
     color: '#fff',
     fontSize: 16,
+  },
+
+  updateNutritionButton: {
+    backgroundColor: COLORS.darkOrange,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    marginLeft: 'auto',
+  },
+  updatedNutritionButtonText: {
+    color: '#fff',
+    fontSize: 14,
   },
 });
 

@@ -74,6 +74,8 @@ const NutritionPlanDropdown = ({ label, data, onSelect }) => {
     >
       {renderDropdown()}
       <Text style={styles.buttonText}>{ selected.label }</Text>
+      <MaterialIcons name="expand-more" size={30} color="#FF6A00" style={{marginTop:5}} />
+      
       {/* <Icon type='ionicon' name='chevron-down' color={COLORS.white} /> */}
     </TouchableOpacity>
   );

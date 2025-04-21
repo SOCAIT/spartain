@@ -8,6 +8,8 @@ import NutritionView from './NutritionView'
 import RecipeScreen from './RecipeScreen'
 import AddModifyPlanScreen from '../Program/AddModifyPlanScreen'
 import MealPlanScreen from './AddMealScreen'
+import NutritionInputScreen from './NutritionInput'
+import AINutritionPlan from '../chat/AINutritionPlan'
 
 const Stack = createNativeStackNavigator()
 
@@ -23,6 +25,8 @@ const NutritionStack = () => {
           <Stack.Screen name="NutritionPlan" component={NutritionPlan} />
           <Stack.Screen name="AddModifyPlan" component={AddNutritionPlan} />
           <Stack.Screen name="AddMealDayPlan" component={MealPlanScreen} />
+          <Stack.Screen name="NutritionInput" component={NutritionInputScreen} />
+          <Stack.Screen name="AINutritionPlan" component={AINutritionPlan} />
 
           <Stack.Screen name="NutritionView" component={NutritionView} />
           <Stack.Screen name="MealView" component={RecipeScreen} />

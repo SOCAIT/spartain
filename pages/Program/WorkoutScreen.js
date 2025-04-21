@@ -64,7 +64,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.dark,
-    padding: 10,
+    paddingTop: Platform.OS === 'ios' ? 45 : 10,
+    paddingHorizontal:  Platform.OS === 'ios' ? 20 : 10,
   },
   header: {
     fontSize: 24,

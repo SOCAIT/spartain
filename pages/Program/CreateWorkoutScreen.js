@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, Image } from 'react-native';
-import ArrowHeader from '../../components/ArrowHeader';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import ArrowHeaderNew from '../../components/ArrowHeaderNew';
 import { backend_url } from '../../config/config';
 import axios from 'axios';
 import { COLORS } from '../../constants';
-import ArrowHeaderNew from '../../components/ArrowHeaderNew';
 import IconButton from '../../components/IconButton';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 const CreateWorkoutScreen = ({ route, navigation }) => {
   const { day, existingWorkout, updateWorkout } = route.params;
@@ -19,7 +19,6 @@ const CreateWorkoutScreen = ({ route, navigation }) => {
     if (workoutName && exercises.length > 0) {
       const workout = { name: workoutName, exercises, type: 'workout' };
       updateWorkout(day, workout);
-      console.log(workout)
       navigation.goBack();
     } else {
       Alert.alert('Error', 'Please enter a workout name and add at least one exercise');
@@ -30,7 +29,7 @@ const CreateWorkoutScreen = ({ route, navigation }) => {
     if (currentExercise.name && currentExercise.sets && currentExercise.reps) {
       setExercises([...exercises, currentExercise]);
       setCurrentExercise({ name: '', sets: '', reps: '' });
-      setIsModalVisible(false);  // Close the modal
+      setIsModalVisible(false);
     } else {
       Alert.alert('Error', 'Please fill out all exercise details');
     }
@@ -49,13 +48,22 @@ const CreateWorkoutScreen = ({ route, navigation }) => {
 
   const searchExercises = (query) => {
     if (query.length > 2) {
+      setIsModalVisible(true);
       axios.get(backend_url + `exercises-search/?search=${query}`)
         .then((response) => {
-          setExerciseSearchResults(response.data);
-          setIsModalVisible(true);  // Show the modal when results are available
+          if (response.data && Array.isArray(response.data)) {
+            setExerciseSearchResults(response.data);
+          } else {
+            setExerciseSearchResults([]);
+          }
+        })
+        .catch((error) => {
+          console.error('Search error:', error);
+          setExerciseSearchResults([]);
+          Alert.alert('Error', 'Failed to search exercises. Please try again.');
         });
     } else {
-      setExerciseSearchResults([]); // Clear results if query is too short
+      setExerciseSearchResults([]);
       setIsModalVisible(false);
     }
   };
@@ -94,33 +102,56 @@ const CreateWorkoutScreen = ({ route, navigation }) => {
         </View>
       </View>
       <TouchableOpacity style={styles.removeButton} onPress={() => removeExercise(index)}>
-        <Text style={styles.removeButtonText}>✕</Text>
+        <MaterialIcons name="delete" size={24} color={COLORS.white} />
       </TouchableOpacity>
     </View>
   );
 
-  const renderSearchExerciseItem = ({ item, index }) => (
-    <TouchableOpacity style={styles.exerciseSearchItem} onPress={() => pressSearchItem(item)}>
-       <View style={styles.searchImageWrapper}>
-        <Image source={{ uri: item.gif }} style={styles.gifImage} />
+  const renderSearchExerciseItem = ({ item }) => (
+    <TouchableOpacity 
+      style={styles.exerciseSearchItem} 
+      onPress={() => {
+        if (item && item.name && item.id && item.gif) {
+          pressSearchItem(item);
+        }
+      }}
+    >
+      <View style={styles.searchImageWrapper}>
+        {item.gif ? (
+          <Image 
+            source={{ uri: item.gif }} 
+            style={styles.gifImage}
+            onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+          />
+        ) : (
+          <View style={[styles.gifImage, { backgroundColor: '#333' }]} />
+        )}
       </View>
-      <Text style={styles.exerciseText}>
-        {item.name}
-      </Text>
+      <Text style={styles.exerciseText}>{item.name || 'Unknown Exercise'}</Text>
     </TouchableOpacity>
   );
 
   const pressSearchItem = (item) => {
-    setCurrentExercise({ ...currentExercise, name: item.name, id: item.id, gif: item.gif });
-    setIsModalVisible(false);
+    try {
+      if (item && item.name && item.id && item.gif) {
+        setCurrentExercise({ 
+          ...currentExercise, 
+          name: item.name, 
+          id: item.id, 
+          gif: item.gif 
+        });
+        setIsModalVisible(false);
+      } else {
+        Alert.alert('Error', 'Invalid exercise data. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error selecting exercise:', error);
+      Alert.alert('Error', 'Failed to select exercise. Please try again.');
+    }
   };
 
-  return (
-    <View style={styles.container}>
-      <ArrowHeaderNew navigation={navigation} />
-
-      <Text style={styles.title}>Create Workout for {day}</Text>
-
+  const renderHeader = () => (
+    <View style={styles.contentContainer}>
       <TextInput
         style={styles.input}
         placeholder="Workout Name"
@@ -129,10 +160,10 @@ const CreateWorkoutScreen = ({ route, navigation }) => {
         onChangeText={setWorkoutName}
       />
 
-      <View style={styles.row}>
+      <View style={styles.exerciseInputContainer}>
         <TextInput
-          style={[styles.input, styles.smallInput]}
-          placeholder="Exercise Name"
+          style={[styles.input, styles.exerciseInput]}
+          placeholder="Search Exercise"
           placeholderTextColor="#aaa"
           value={currentExercise.name}
           onChangeText={(text) => {
@@ -140,52 +171,72 @@ const CreateWorkoutScreen = ({ route, navigation }) => {
             searchExercises(text);
           }}
         />
-        <TextInput
-          style={[styles.input, styles.smallInputNumber]}
-          placeholder="Sets"
-          placeholderTextColor="#aaa"
-          keyboardType="numeric"
-          value={currentExercise.sets}
-          onChangeText={(text) => setCurrentExercise({ ...currentExercise, sets: text })}
-        />
-        <TextInput
-          style={[styles.input, styles.smallInputNumber]}
-          placeholder="Reps"
-          placeholderTextColor="#aaa"
-          keyboardType="numeric"
-          value={currentExercise.reps}
-          onChangeText={(text) => setCurrentExercise({ ...currentExercise, reps: text })}
-        />
-
-        {/* <TouchableOpacity style={styles.addButton} onPress={addExercise}>
-          <Text style={styles.buttonText}>+</Text>
-        </TouchableOpacity> */}
-
-        <IconButton name='add' onPress={addExercise} />
+        <View style={styles.setsRepsInputContainer}>
+          <TextInput
+            style={[styles.input, styles.smallInputNumber]}
+            placeholder="Sets"
+            placeholderTextColor="#aaa"
+            keyboardType="numeric"
+            value={currentExercise.sets}
+            onChangeText={(text) => setCurrentExercise({ ...currentExercise, sets: text })}
+          />
+          <TextInput
+            style={[styles.input, styles.smallInputNumber]}
+            placeholder="Reps"
+            placeholderTextColor="#aaa"
+            keyboardType="numeric"
+            value={currentExercise.reps}
+            onChangeText={(text) => setCurrentExercise({ ...currentExercise, reps: text })}
+          />
+        </View>
+        <IconButton name="add" onPress={addExercise} style={styles.addButton} />
       </View>
 
       {isModalVisible && (
         <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Search Results</Text>
+            <TouchableOpacity onPress={() => setIsModalVisible(false)}>
+              <MaterialIcons name="close" size={24} color={COLORS.white} />
+            </TouchableOpacity>
+          </View>
           <FlatList
             data={exerciseSearchResults}
             renderItem={renderSearchExerciseItem}
             keyExtractor={(item) => item.id.toString()}
             style={styles.exerciseList}
+            nestedScrollEnabled
           />
         </View>
       )}
-
-      <FlatList
-        data={exercises}
-        renderItem={renderExerciseItem}
-        keyExtractor={(item, index) => index.toString()}
-        style={styles.exerciseList}
-      />
-
-      <TouchableOpacity style={styles.saveButton} onPress={saveWorkoutAndGoBack}>
-        <Text style={styles.buttonText}>Save Workout</Text>
-      </TouchableOpacity>
     </View>
+  );
+
+  const renderFooter = () => (
+    <TouchableOpacity style={styles.saveButton} onPress={saveWorkoutAndGoBack}>
+      <Text style={styles.saveButtonText}>Save Workout</Text>
+    </TouchableOpacity>
+  );
+
+  return (
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <View style={styles.gradient}>
+        <ArrowHeaderNew navigation={navigation} title={`Create Workout for ${day}`} />
+
+        <FlatList
+          data={exercises}
+          renderItem={renderExerciseItem}
+          keyExtractor={(item, index) => index.toString()}
+          ListHeaderComponent={renderHeader}
+          ListFooterComponent={renderFooter}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -193,155 +244,159 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1e1e1e',
-    padding: 20,
+    paddingTop: Platform.OS === 'ios' ? 35 : 10,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 20,
-    textAlign: 'center',
+  gradient: {
+    flex: 1,
+    backgroundColor: '#1e1e1e',
+  },
+  listContent: {
+    flexGrow: 1,
+  },
+  contentContainer: {
+    padding: 20,
   },
   input: {
     backgroundColor: '#333',
     color: '#fff',
-    padding: 10,
-    borderRadius: 5,
+    padding: 15,
+    borderRadius: 12,
     marginBottom: 15,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#444',
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  exerciseInputContainer: {
     marginBottom: 20,
   },
-  smallInput: {
-    flex: 1,
-    marginRight: 10,
-    textAlign: 'center',
+  exerciseInput: {
+    marginBottom: 10,
+  },
+  setsRepsInputContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
   },
   smallInputNumber: {
-    marginRight: 10,
-    height: 50,
+    flex: 1,
     textAlign: 'center',
   },
   addButton: {
-    backgroundColor: '#4caf50',
-    borderRadius: 5,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+    backgroundColor: COLORS.darkOrange,
+    borderRadius: 12,
+    padding: 12,
     alignItems: 'center',
-    justifyContent: 'center',
-    height: 50,
   },
-  buttonText: {
+  modalContainer: {
+    backgroundColor: '#2b2b2b',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  modalTitle: {
     color: '#fff',
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   exerciseList: {
-    marginTop: 20,
+    marginTop: 10,
   },
   addedExerciseItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: '#2b2b2b',
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 5,
-    height: 120,
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  imageWrapper: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginRight: 15,
+  },
+  gifImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   exerciseDetailsContainer: {
     flex: 1,
-    marginLeft: 10,
-  },
-  setsRepsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 5,
-  },
-  smallInputContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  smallInputAdded: {
-    color: COLORS.white,
-    backgroundColor: '#333',
-    borderRadius: 5,
-    textAlign: 'center',
-    width: '80%',
-    height: 40,
-  },
-  removeButton: {
-    backgroundColor: '#ff4d4d',
-    borderRadius: 5,
-    padding: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  removeButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  exerciseSearchItem: {
-    flexDirection: 'row',
-    backgroundColor: '#2b2b2b',
-    padding: 15,
-    borderRadius: 5,
-    marginBottom: 10,
-  },
-  imageWrapper: {
-    width: 60,
-    height: 60,
-    borderRadius: 8, // Adjust the radius to make the image rounded
-    overflow: 'hidden', // Ensures the image respects the borderRadius
-  },
-  searchImageWrapper: {
-    width: 60,
-    height: 60,
-    borderRadius: 8, // Adjust the radius to make the image rounded
-    overflow: 'hidden', // Ensures the image respects the borderRadius
-  },
-  gifImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 5,
-  },
-  gifImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 5,
   },
   exerciseText: {
     color: '#fff',
     fontSize: 16,
-    marginLeft: 10,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  setsRepsContainer: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  smallInputContainer: {
     flex: 1,
   },
   exerciseTitle: {
-    color: '#fff',
-    fontSize: 14,
+    color: '#aaa',
+    fontSize: 12,
     marginBottom: 5,
   },
-  modalContainer: {
-    backgroundColor: '#2b2b2b',
-    borderRadius: 5,
-    marginTop: -10,
-    padding: 10,
-    maxHeight: 500,
-    position: 'absolute',
-    left: 20,
-    right: 20,
-    zIndex: 1000,
+  smallInputAdded: {
+    backgroundColor: '#333',
+    color: '#fff',
+    padding: 8,
+    borderRadius: 8,
+    textAlign: 'center',
+  },
+  removeButton: {
+    backgroundColor: '#ff4d4d',
+    borderRadius: 8,
+    padding: 8,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  exerciseSearchItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#333',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  searchImageWrapper: {
+    width: 50,
+    height: 50,
+    borderRadius: 6,
+    overflow: 'hidden',
+    marginRight: 12,
   },
   saveButton: {
     backgroundColor: COLORS.darkOrange,
-    fontSize:15,
-    paddingVertical: 15,
-    borderRadius: 5,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 20,
+    marginBottom: 20,
+    marginHorizontal: 20,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 

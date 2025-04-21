@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, Image } from 'react-native';
-import ArrowHeader from '../../components/ArrowHeader';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, Image, Platform} from 'react-native';
 import axios from 'axios';
-import { COLORS, SIZES } from '../../constants';
-import { backend_url } from '../../config/config';
+import { COLORS, SIZES } from '../../../constants';
+import { backend_url } from '../../../config/config';
+import ArrowHeaderNew from '../../../components/ArrowHeaderNew';
 
 const UpdateWorkoutScreen = ({ route, navigation }) => {
   const { workout } = route.params;
@@ -120,9 +120,9 @@ const UpdateWorkoutScreen = ({ route, navigation }) => {
 
   return (
     <View style={styles.container}>
-      <ArrowHeader navigation={navigation} />
+      <ArrowHeaderNew navigation={navigation} title={"Update Workout"} />
 
-      <Text style={styles.title}>Update Workout: {workout.name}</Text>
+      {/* <Text style={styles.title}>Update Workout: {workout.name}</Text> */}
 
       <TextInput
         style={styles.input}
@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1e1e1e',
-    padding: 20,
+    padding: Platform.OS == 'ios' ? 40: 20,
   },
   title: {
     fontSize: 24,

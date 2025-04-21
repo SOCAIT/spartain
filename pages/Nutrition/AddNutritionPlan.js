@@ -368,7 +368,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1e1e1e',
-    padding: 20,
+    paddingHorizontal: Platform.OS === 'ios' ? 30 : 16,
+     paddingTop: Platform.OS === 'ios' ? 45 : 0,
   },
   input: {
     backgroundColor: '#333',

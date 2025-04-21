@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, ImageBackground, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ImageBackground, Image, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
@@ -49,6 +49,8 @@ export default function SignInScreen({navigation}) {
         setAuthState({
           username: response.data.username, id: response.data.id, status: true,
           profile_photo: response.data.profile_photo,  age: response.data.age, height: response.data.height_cm,
+          user_target: response.data.user_target, latest_body_measurement: response.data.latest_body_measurement,
+           gender: response.data.gender, target_nutrition_data: response.data.target_nutrition_data,
         })
       }
     })
@@ -86,7 +88,8 @@ export default function SignInScreen({navigation}) {
 
       <View style={styles.container}>
         <View style={styles.header}>
-          <MaterialIcons name="fitness-center" size={40} color="#FF6A00" />
+          {/* Image Logo */}
+          <Image source={require('../../assets/icons/spartan_logo.png')} style={{ width: 300, height: 200 }} />
           <Text style={styles.title}>Sign In To SyntraFit</Text>
           <Text style={styles.subtitle}>Let's personalize your fitness with AI</Text>
         </View>
@@ -142,22 +145,22 @@ export default function SignInScreen({navigation}) {
           <MaterialIcons name="arrow-forward" size={20} color="#FFF" style={styles.iconRight} />
         </TouchableOpacity>
 
-        <View style={styles.socialContainer}>
+        {/* <View style={styles.socialContainer}>
           <Icon name="instagram" size={30} color="#FFF" style={styles.socialIcon} />
           <Icon name="facebook" size={30} color="#FFF" style={styles.socialIcon} />
           <Icon name="linkedin" size={30} color="#FFF" style={styles.socialIcon} />
-        </View>
+        </View> */}
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
             <Text style={styles.linkText}>Sign Up</Text>
           </TouchableOpacity>
-        </View>
+        </View> 
         
-        <TouchableOpacity>
+        {/*<TouchableOpacity>
           <Text style={styles.linkText}>Forgot Password</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
       </View>
     // </ImageBackground>
@@ -167,6 +170,8 @@ export default function SignInScreen({navigation}) {
 const styles = StyleSheet.create({
   screen:{
     flex: 1,
+    paddingTop: Platform.OS === 'ios' ? 45 :0,
+
     backgroundColor: COLORS.primary
 
   },
@@ -179,7 +184,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   container: {
-    flex: 1,
+    // flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 30,
   },

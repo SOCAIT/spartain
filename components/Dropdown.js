@@ -1,5 +1,6 @@
-import React, { FC, useState, useRef} from 'react';
-import { StyleSheet, Text, TouchableOpacity,TouchableWithoutFeedback,  Modal, View, FlatList} from 'react-native';
+import React, {  useState, useRef} from 'react';
+import { StyleSheet, Text, TouchableOpacity,TouchableWithoutFeedback,  Modal, View, FlatList, Platform} from 'react-native';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import { COLORS, SIZES, FONTS } from '../constants';
 
@@ -17,14 +18,15 @@ const [selected, setSelected] = useState(data[0]);
 
   const renderDropdown = () => {
     return (
-      <Modal visible={visible} transparent animationType="slider" >
+      <Modal visible={visible} transparent  presentationStyle="overFullScreen">
+         <Text>HERE</Text>
             <TouchableWithoutFeedback
             onPress={() => setVisible(false)}         
         >
             <View style={{flex: 1, alignItems: 'center', justifyContent:'center'}}>
               <View
                 style={{
-                  height: 400,
+                  height: Platform.OS === 'ios' ? 400: 400,
                   width: SIZES.width * 0.8,
                   backgroundColor: COLORS.primary,
                   borderRadius: SIZES.radius
@@ -56,9 +58,9 @@ const [selected, setSelected] = useState(data[0]);
   };
   
   const openDropdown = () => {
-    DropdownButton.current.measure((_fx, _fy, _w, h, _px, py) => {
-      setDropdownTop(py + h);
-    });
+    // DropdownButton.current.measure((_fx, _fy, _w, h, _px, py) => {
+    //   setDropdownTop(py + h);
+    // });
     setVisible(true);
   };
 
@@ -84,7 +86,8 @@ const [selected, setSelected] = useState(data[0]);
     >
       {renderDropdown()}
       <Text style={styles.buttonText}>{selected.label}</Text>
-      {/* <Icon type='ionicon' name='chevron-down' color={COLORS.white}/> */}
+      <MaterialIcons name="expand-more" size={30} color="#FF6A00" style={{marginTop:5}} />
+      
     </TouchableOpacity>
   );
 }

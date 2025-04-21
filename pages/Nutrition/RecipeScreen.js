@@ -1,8 +1,9 @@
 import React, {useState} from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions, ScrollView } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions, ScrollView, Platform } from 'react-native';
 import ArrowHeader from '../../components/ArrowHeader';
 import InstructionsModal from '../../components/modals/InstructionModal';
 import { COLORS } from '../../constants';
+import ArrowHeaderNew from '../../components/ArrowHeaderNew';
 
 const RecipeScreen = ({navigation, route}) => {
 
@@ -21,10 +22,10 @@ const RecipeScreen = ({navigation, route}) => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-     <ArrowHeader navigation={navigation} paddingTop={10} /> 
-      <View style={styles.imageContainer}>
+     <ArrowHeaderNew navigation={navigation} title={meal.name} />
+      {/* <View style={styles.imageContainer}>
         <Image   source={dummy_item.image ? { uri: dummy_item.image } : require('../../assets/images/oat.webp')}  style={styles.image} />
-      </View>
+      </View> */}
       <View style={styles.contentContainer}>
         <Text style={styles.title}>{meal.name}</Text>
         <Text style={styles.description}>{meal.description}</Text>
@@ -65,6 +66,7 @@ const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: COLORS.dark,
+    paddingTop: Platform.OS === 'ios' ? 45 : 0
   },
   imageContainer: {
     backgroundColor: COLORS.primary,

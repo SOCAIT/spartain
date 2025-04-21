@@ -1,5 +1,5 @@
 import React, { useState,useContext, useEffect } from 'react';
-import { View, Text,TextInput, TouchableOpacity, StyleSheet, FlatList, Alert } from 'react-native';
+import { View, Text,TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, Platform, KeyboardAvoidingView, ScrollView } from 'react-native';
 import ArrowHeader from '../../components/ArrowHeader';
 import DaySelector from '../../components/DaySelector';
 import { AuthContext } from '../../helpers/AuthContext'
@@ -15,9 +15,10 @@ const USER= {
   "id": 0
 }
 
+const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const CreateWorkoutPlanScreen = ({ navigation }) => {
-  const [selectedDay, setSelectedDay] = useState('Mon');
+  const [selectedDay, setSelectedDay] = useState(0); // 0-6 for Monday-Sunday
   const [workouts, setWorkouts] = useState({ Mon: {}, Tue: {}, Wed: {}, Thu: {}, Fri: {}, Sat: {}, Sun: {} });
   const [planName, setPlanName] = useState("")
   const [selectedWorkout, setSelectedWorkout] = useState(workouts['Mon'])
@@ -168,65 +169,86 @@ const CreateWorkoutPlanScreen = ({ navigation }) => {
   };
 
   const renderWorkoutItem = ({ item }) => (
-    <View style={styles.workoutItem}>
-      <Text style={styles.dayLabel}>{item.day}</Text>
-      <Text style={styles.workoutText}>{item.name || 'No Workout Set'}</Text>
-
-      
-      <View style={{flexDirection: 'row'}}>
-      {
-          item.name ? (
-         <TouchableOpacity style={styles.added} onPress={() => navigateToCreateWorkout(item.day)}>
-          <MaterialIcons name="edit" size={15} color={COLORS.white} style={{alignItems:'center', justifyContent: 'center'}}/>
-        </TouchableOpacity>
-          ) : <></> }
-     
-      {/* <MaterialIcons name="done" size={20} color="#0f0" style={{alignItems:'center', justifyContent: 'center'}}/> */}
-
+    <TouchableOpacity 
+      style={styles.workoutItem}
+      onPress={() => navigateToCreateWorkout(item.day)}
+    >
+      <View style={styles.workoutItemContent}>
+        <View style={styles.dayContainer}>
+          <Text style={styles.dayLabel}>{item.day}</Text>
+          <Text style={styles.workoutText}>{item.name || 'No Workout Set'}</Text>
+        </View>
+        {item.name ? (
+          <TouchableOpacity 
+            style={styles.editButton} 
+            onPress={() => navigateToCreateWorkout(item.day)}
+          >
+            <MaterialIcons name="edit" size={20} color={COLORS.white} />
+          </TouchableOpacity>
+        ) : null}
       </View>
-    
-    </View>
+    </TouchableOpacity>
   );
 
   const workoutListData = Object.keys(workouts).map(day => ({ day, ...workouts[day] }));
 
   return (
-    <View style={styles.container}>
-      <ArrowHeaderNew navigation={navigation} title={"Create Workout Plan"} />
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <View style={styles.gradient}>
+        <ArrowHeaderNew navigation={navigation} title={"Create Workout Plan"} />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Workout Plan Name"
-        placeholderTextColor="#aaa"
-        value={planName}
-        onChangeText={setPlanName}
-      />
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          <View style={styles.contentContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Workout Plan Name"
+              placeholderTextColor="#aaa"
+              value={planName}
+              onChangeText={setPlanName}
+            />
 
-      <DaySelector selectedDay={selectedDay} setSelectedDay={setSelectedDay} />
+            <DaySelector 
+              selectedDay={selectedDay} 
+              onDaySelect={setSelectedDay}
+            />
 
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.workoutButton} onPress={() => navigateToCreateWorkout(selectedDay)}>
-          <Text style={styles.buttonText}>Add/Edit Workout for {selectedDay}</Text>
-        </TouchableOpacity>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.workoutButton]} 
+                onPress={() => navigateToCreateWorkout(dayNames[selectedDay])}
+              >
+                <Text style={styles.buttonText}>Add/Edit Workout</Text>
+              </TouchableOpacity>
 
-        <TouchableOpacity style={styles.restButton} onPress={markAsRestDay}>
-          <Text style={styles.buttonText}>Mark as Rest Day</Text>
-        </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.actionButton, styles.restButton]} 
+                onPress={markAsRestDay}
+              >
+                <Text style={styles.buttonText}>Rest Day</Text>
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={workoutListData}
+              renderItem={renderWorkoutItem}
+              keyExtractor={(item) => item.day}
+              style={styles.workoutList}
+              scrollEnabled={false}
+            />
+
+            <TouchableOpacity 
+              style={styles.saveButton} 
+              onPress={saveWorkoutPlan}
+            >
+              <Text style={styles.saveButtonText}>Save Workout Plan</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </View>
-
-      <FlatList
-        data={workoutListData}
-        renderItem={renderWorkoutItem}
-        keyExtractor={(item) => item.day}
-        style={styles.workoutList}
-      />
-
-      
-     
-      <TouchableOpacity style={styles.saveButton} onPress={saveWorkoutPlan}>
-        <Text style={styles.buttonText}>Save Workout Plan</Text>
-      </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -234,81 +256,107 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1e1e1e',
+    paddingTop: Platform.OS === 'ios' ? 35 : 10,
+  },
+  gradient: {
+    flex: 1,
+    backgroundColor: '#1e1e1e',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  contentContainer: {
     padding: 20,
   },
   input: {
     backgroundColor: '#333',
     color: '#fff',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 15,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
+    padding: 15,
+    borderRadius: 12,
     marginBottom: 20,
-    textAlign: 'center',
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#444',
   },
   workoutItem: {
+    backgroundColor: '#2b2b2b',
+    borderRadius: 12,
+    marginBottom: 12,
+    padding: 15,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  workoutItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2b2b2b',
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 5,
-    justifyContent: 'space-between', // Places the items at both ends
+    justifyContent: 'space-between',
+  },
+  dayContainer: {
+    flex: 1,
   },
   dayLabel: {
     color: '#fff',
-    marginRight: 10,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
   },
   workoutText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontSize: 14,
+    opacity: 0.8,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 20,
+    gap: 10,
+  },
+  actionButton: {
+    flex: 1,
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   workoutButton: {
     backgroundColor: COLORS.darkOrange,
-    borderRadius: 5,
-    padding: 15,
-    marginRight: 10,
-    flex: 1,
-    alignItems: 'center',
   },
   restButton: {
-    backgroundColor: '#ff0000',
-    borderRadius: 5,
-    padding: 15,
-    flex: 1,
-    alignItems: 'center',
+    backgroundColor: '#444',
   },
   buttonText: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: 14,
   },
   saveButton: {
     backgroundColor: COLORS.darkOrange,
-    paddingVertical: 15,
-    borderRadius: 5,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  editButton: {
+    backgroundColor: COLORS.darkOrange,
+    borderRadius: 8,
+    padding: 8,
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   workoutList: {
-    marginTop: 20,
+    marginTop: 10,
   },
-
-  added: {
-    backgroundColor: COLORS.darkOrange,
-    borderRadius: 10,
-    padding:10,
-    justifyContent: 'center',
-    alignItems:'center'
-    
- },
 });
 
 export default CreateWorkoutPlanScreen;

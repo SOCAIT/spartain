@@ -49,7 +49,11 @@ backend_url_exodia= "https://8930-31-216-76-175.ngrok-free.app/api/";
 
 var backend_url = "https://socait.com:80/"
 
-backend_url = "https://8930-31-216-76-175.ngrok-free.app/api/"
+backend_url = "https://api.syntrafit.com/api/"
+var agent_url = "https://ersebpxznd.eu-west-3.awsapprunner.com/chat"
+var vision_url = "https://ni9upzgef8.eu-west-3.awsapprunner.com/"
+
+//agent_url = "http://localhost:8080/chat"
 
 // backend_url ="http://34.102.246.190:80/api/"
 //token
@@ -61,5 +65,5 @@ const lelouch_photo = "https://slifer.s3.amazonaws.com/Lelouch-Zero.jpg?X-Amz-Al
 
 
 
-module.exports = {backend_url};
+module.exports = {backend_url, agent_url, vision_url};
       

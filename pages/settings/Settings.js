@@ -46,7 +46,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     // justifyContent: 'center',
     //paddingHorizontal: 16,
-    backgroundColor: COLORS.dark
+    paddingTop: Platform.OS === 'ios' ? 40 :0,
+
+    backgroundColor: COLORS.dark,
   },
   header: {
     fontSize: 22,

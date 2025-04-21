@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import Settings from './Settings';
 import ProSubscriptionScreen from '../SubscriptionDetails';
+import ComingSoonScreen from '../Soon';
 // import ChangePassword from './ChangePassword'; // A screen to change the password
 
 const Stack = createNativeStackNavigator();
@@ -10,12 +11,13 @@ const Stack = createNativeStackNavigator();
 const SettingsStack = () => {
     return (
         <Stack.Navigator
-            initialRouteName="Settings"
+            initialRouteName="Soon"
             screenOptions={{
                 headerShown: false
             }}
-        >
+        > 
             <Stack.Screen name="Settings" component={Settings} />
+            <Stack.Screen name="Soon" component={ComingSoonScreen} />
             <Stack.Screen name="Subscription" component={ProSubscriptionScreen} />
             
 

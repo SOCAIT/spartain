@@ -8,7 +8,10 @@ import WorkoutScreen from './WorkoutScreen';
 import ExerciseDetailsScreen from './ExerciseDetailsScreeen';
 import CreateWorkoutPlanScreen from './CreateWorkoutPlanScreen';
 import CreateWorkoutScreen from './CreateWorkoutScreen';
-import UpdateWorkoutScreen from './UpdateWorkoutScreen';
+import UpdateWorkoutScreen from './update/UpdateWorkoutScreen';
+import ExerciseSearch from './ExerciseSearch';
+import UpdateWorkoutPlanScreen from './update/UpdateWorkoutPlan';
+import AIWorkoutPlanScreen from '../chat/AIWorkoutPlan';
 
 const Stack = createNativeStackNavigator()
 
@@ -26,6 +29,10 @@ const Program = () => {
         <Stack.Screen name='ExerciseDetails' component={ExerciseDetailsScreen} />
         <Stack.Screen name="CreateWorkoutScreen" component={CreateWorkoutScreen} />
         <Stack.Screen name="UpdateWorkoutScreen" component={UpdateWorkoutScreen} />
+                <Stack.Screen name="AIWorkoutPlan" component={AIWorkoutPlanScreen} />
+        
+        <Stack.Screen name="UpdateWorkoutPlan" component={UpdateWorkoutPlanScreen} />
+        <Stack.Screen name="ExerciseSearch" component={ExerciseSearch} />
 
 
       </Stack.Navigator>

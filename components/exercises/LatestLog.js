@@ -48,7 +48,7 @@ const latestLogs = {
   };
 const LatestLog = ({exercise, data}) => {
 
-    const [selected, setSelected] = useState(dropdown_data[1]);
+    const [selected, setSelected] = useState(dropdown_data[0]);
 
   
     //const [data, setData] = useState(dummy_data);

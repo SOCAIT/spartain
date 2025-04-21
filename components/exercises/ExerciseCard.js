@@ -19,10 +19,10 @@ const ExerciseCard = ({navigation, exerciseItem}) => {
           <View style={styles.workoutDetails}>
             <Text style={styles.workoutTitle}>{exerciseItem.exercise.name}</Text>
             <Text style={styles.workoutInfo}>Reps: {exerciseItem.suggestedReps} / Sets: {exerciseItem.suggestedSets}</Text>
-            <View style={styles.workoutMetrics}>
+            {/* <View style={styles.workoutMetrics}>
               <Text style={styles.workoutMetric}>25min</Text>
               <Text style={styles.workoutMetric}>412kcal</Text>
-            </View>
+            </View> */}
           </View>
           <TouchableOpacity style={styles.playButton} onPress={() => navigateToExerciseDetails(exerciseItem.exercise)}>
             <MaterialIcons name="chevron-right" size={24} color="#FFF" />

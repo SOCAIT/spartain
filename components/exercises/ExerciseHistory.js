@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { COLORS } from '../../constants';
 
 import CustomLineChart from '../charts/CustomLineChart';
@@ -53,7 +53,7 @@ const dropdown_data =[
 
 const ExerciseHistory = ({ history }) => {
 
-  const [selected, setSelected] = useState(dropdown_data[1]);
+  const [selected, setSelected] = useState(dropdown_data[0]);
 
   
   const [data, setData] = useState(dummy_data);
@@ -138,7 +138,7 @@ const ExerciseHistory = ({ history }) => {
 const styles = StyleSheet.create({
   container: {
     marginBottom: 20,
-    alignItems: 'center'
+    alignItems: 'center',
     // width: "90%"
   },
   header: {

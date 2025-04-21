@@ -1,0 +1,16 @@
+splashContainer: {
+    flex: 1,
+    backgroundColor: COLORS.dark,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logo: {
+    width: 150, // Adjust based on your design
+    height: 150, // Adjust based on your design
+    marginBottom: 20,
+  },
+  splashTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  },
