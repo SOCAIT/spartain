@@ -4,7 +4,7 @@ import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Alert, Keyb
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { Picker } from '@react-native-picker/picker';
+// import { Picker } from '@react-native-picker/picker';
 import { COLORS } from '../../constants';
 import ArrowHeaderNew from '../../components/ArrowHeaderNew';
 import { useNavigation } from '@react-navigation/native';
