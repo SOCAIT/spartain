@@ -51,6 +51,7 @@ var backend_url = "https://socait.com:80/"
 
 backend_url = "https://api.syntrafit.com/api/"
 var agent_url = "https://ersebpxznd.eu-west-3.awsapprunner.com/chat"
+//agent_url = "http://localhost:8000/chat"
 var vision_url = "https://ni9upzgef8.eu-west-3.awsapprunner.com/"
 
 //agent_url = "http://localhost:8080/chat"
@@ -63,7 +64,8 @@ const publishableKey = ""
 
 const lelouch_photo = "https://slifer.s3.amazonaws.com/Lelouch-Zero.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIA5MWUER255TQW3LTS%2F20220718%2Feu-west-3%2Fs3%2Faws4_request&X-Amz-Date=20220718T112528Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=63c4c79d74efd3589b1bf44c6d0f1b6838ae3f1a8219743436a3fe1bd6703b28"
 
+const USDA_API_KEY = "F5Jya9rrfbPA5nBtVQmThPdQRajXLBPITdNZyoOS"
 
 
-module.exports = {backend_url, agent_url, vision_url};
+module.exports = {backend_url, agent_url, vision_url, USDA_API_KEY};
       

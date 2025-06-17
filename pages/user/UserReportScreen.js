@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, Platform } from 'react-native';
 import { LineChart, BarChart, ProgressChart } from 'react-native-chart-kit';
-import { Dimensions } from 'react-native';
 import {COLORS} from '../../constants';
 import ArrowHeader from '../../components/ArrowHeader';
 import { useNavigation } from '@react-navigation/native';
+import InfoIcon from '../../components/InfoIcon';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -92,15 +92,24 @@ const UserReportScreen = ({route}) => {
         <Text style={styles.sectionTitle}>Body Composition</Text>
         <View style={styles.statRow}>
           <Text style={styles.statLabel}>Body Fat:</Text>
-          <Text style={styles.statValue}>15%</Text>
+          <View style={styles.valueWithIcon}>
+            <Text style={styles.statValue}>15%</Text>
+            <InfoIcon type="bodyComposition" size={14} />
+          </View>
         </View>
         <View style={styles.statRow}>
           <Text style={styles.statLabel}>Muscle Mass:</Text>
-          <Text style={styles.statValue}>40%</Text>
+          <View style={styles.valueWithIcon}>
+            <Text style={styles.statValue}>40%</Text>
+            <InfoIcon type="bodyComposition" size={14} />
+          </View>
         </View>
         <View style={styles.statRow}>
           <Text style={styles.statLabel}>Water Percentage:</Text>
-          <Text style={styles.statValue}>55%</Text>
+          <View style={styles.valueWithIcon}>
+            <Text style={styles.statValue}>55%</Text>
+            <InfoIcon type="bodyComposition" size={14} />
+          </View>
         </View>
       </View>
 
@@ -109,7 +118,10 @@ const UserReportScreen = ({route}) => {
         <Text style={styles.sectionTitle}>Health Metrics</Text>
         <View style={styles.statRow}>
           <Text style={styles.statLabel}>BMI:</Text>
-          <Text style={styles.statValue}>{user.bmi}</Text>
+          <View style={styles.valueWithIcon}>
+            <Text style={styles.statValue}>{user.bmi}</Text>
+            <InfoIcon type="bmi" size={14} />
+          </View>
         </View>
         <View style={styles.statRow}>
           <Text style={styles.statLabel}>Weight:</Text>
@@ -240,6 +252,10 @@ const styles = StyleSheet.create({
   chart: {
     borderRadius: 16,
     width: '100%'
+  },
+  valueWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
 

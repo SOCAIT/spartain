@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useContext } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+import React, { useEffect, useState, useContext, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, Alert, Platform, Keyboard, TouchableWithoutFeedback, ScrollView, FlatList } from 'react-native';
 import Dropdown from '../../components/Dropdown';
 import IconHeader from '../../components/IconHeader';
 import WorkoutCard from '../../components/workouts/WokroutCard';
@@ -14,12 +14,20 @@ import SectionHeader from '../../components/SectionHeader';
 import SearchInput from '../../components/inputs/SearchInput';
 import OptionModal from '../../components/buttons/OptionModal';
 import DaySelector from '../../components/DaySelector';
+import Video from 'react-native-video';
+import { useNavigation } from '@react-navigation/native';
+import ArrowHeaderNew from '../../components/ArrowHeaderNew';
+import debounce from 'lodash.debounce';
+import SubscriptionModal from '../../components/SubscriptionModal';
+import { useSubscription } from '../../hooks/useSubscription';
 
 const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   
-const WorkoutPlanScreen = ({ navigation }) => {
-  const today = new Date()
-  const [selectedDay, setSelectedDay] = useState(today.getDay()-1);
+const WorkoutPlanScreen = () => {
+  const navigation = useNavigation();
+  const today = new Date();
+  const currentDayIndex = today.getDay() === 0 ? 6 : today.getDay() - 1;
+  const [selectedDay, setSelectedDay] = useState(currentDayIndex);
   const { authState } = useContext(AuthContext);
   const [workoutPlansData, setWorkoutPlansData] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -31,11 +39,36 @@ const WorkoutPlanScreen = ({ navigation }) => {
 
   const [modalVisible, setModalVisible] = useState(false);
 
+  const { checkSubscription, showSubscriptionModal, setShowSubscriptionModal, handleSubscribe } = useSubscription();
+
+  // Add debounced search function
+  const debouncedSearch = useCallback(
+    debounce((query) => {
+      if (query.length <= 4) {
+        setExerciseSearchResults([]);
+        return;
+      }
+      axios.get(`${backend_url}exercises-search/?search=${query}`)
+        .then((response) => {
+          console.log(response.data);
+          setExerciseSearchResults(response.data.results);
+        })
+        .catch((error) => {
+          console.error('Search error:', error);
+          Alert.alert('Error', 'Failed to search exercises. Please try again.');
+        });
+    }, 300),
+    []
+  );
+
+  const searchExercises = (query) => {
+    debouncedSearch(query);
+  };
 
   const graphql_user_workout_plans = {
     query: `
-      query {
-        userWorkoutPlans(userId: ${authState.id}) {
+      query FetchUserWorkoutPlans {
+        userWorkoutPlans(userId: ${authState?.id || 0}) {
           id
           name
           workoutSet {
@@ -47,8 +80,12 @@ const WorkoutPlanScreen = ({ navigation }) => {
               exercise {
                 id
                 name
-                gif 
+                maleVideo
+                femaleVideo
                 description
+                equipment
+                target
+                
               }
             }
           }
@@ -58,46 +95,129 @@ const WorkoutPlanScreen = ({ navigation }) => {
   };
 
   const fetchWorkouts = () => {
-    axios.post(`${backend_url}graphql/`, graphql_user_workout_plans)
-      .then((response) => {
-        const plans = response.data.data.userWorkoutPlans.map((obj) => ({
-          label: obj.name,
-          value: parseInt(obj.id, 10),  // Ensure the value is an integer
-          workoutSet: obj.workoutSet,
-        }));
+    if (!authState?.id) {
+      console.error("User ID is missing or invalid");
+      return;
+    }
 
-        console.log("Fetched Plans:", plans);
+    console.log("Fetching workout plans for user ID:", authState.id);
+    
+    axios.post(`${backend_url}graphql/`, graphql_user_workout_plans, {
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+    .then((response) => {
+      if (response.data?.errors) {
+        console.error("GraphQL errors:", response.data.errors);
+        Alert.alert("Error", "Failed to load workout plans.");
+        return;
+      }
 
-        setWorkoutPlansData(plans);
+      var plans = response.data?.data?.userWorkoutPlans?.map((obj) => ({
+        label: obj.name,
+        value: parseInt(obj.id, 10),  // Ensure the value is an integer
+        workoutSet: obj.workoutSet,
+      })) || [];
 
-        if (plans.length > 0) {
-          const initialPlan = plans[0];
-          setSelectedPlan(initialPlan.value);
-          const initialWorkout = initialPlan.workoutSet.find(workout => parseInt(workout.day, 10) === daysOfWeek.indexOf(selectedDay));
-          setSelectedWorkout(initialWorkout);
+      // check the max day
+      const maxDay = Math.max(...plans.map(plan => Math.max(...plan.workoutSet.map(workout => parseInt(workout.day, 10)))));
+      console.log("Max day:", maxDay);
 
-          console.log("Initial Plan Selected:", initialPlan);
-          console.log("Initial Workout Selected:", initialWorkout);
-        }
-      })
-      .catch((error) => {
-        console.error("Error fetching workout plans:", error);
-      });
+      if (maxDay >= 7) {
+
+          // map the plans and make the day one less (7-> 6, 6-> 5, 5-> 4, 4-> 3, 3-> 2, 2-> 1, 1-> 0)
+          plans = plans.map(plan => ({
+            ...plan,
+            workoutSet: plan.workoutSet.map(workout => ({
+              ...workout,
+              day: workout.day - 1,
+              workoutexerciseSet: workout.workoutexerciseSet.map(exercise => ({
+                ...exercise,
+              
+              }))
+            }))
+          }));
+
+          // make day string from 1 to "1"
+          plans = plans.map(plan => ({
+            ...plan,
+            workoutSet: plan.workoutSet.map(workout => ({
+              ...workout,
+              day: workout.day.toString()
+            }))
+          }));
+
+      }
+      
+
+      console.log("Fetched Plans:", plans);
+
+      setWorkoutPlansData(plans);
+
+      if (plans.length > 0) {
+        const initialPlan = plans[0];
+        setSelectedPlan(initialPlan.value);
+        
+        const dayIndexStr = selectedDay.toString();
+        const initialWorkout = initialPlan.workoutSet.find(workout => workout.day === dayIndexStr);
+        
+        setSelectedWorkout(initialWorkout);
+        console.log("Initial Plan Selected:", initialPlan);
+        console.log("Initial Workout Selected:", initialWorkout);
+      }
+    })
+    .catch((error) => {
+      console.error("Error fetching workout plans:", error);
+      console.error("Error details:", error.response?.data || error.message);
+      Alert.alert("Error", "Failed to load workout plans. Please try again later.");
+    });
+  };
+
+  const getVideoSource = (item) => {
+    console.log("Getting video source for item:", item);
+    if (!item) return '';
+    if (authState.gender === 'M' && item.maleVideo) {
+      return item.maleVideo;
+    } else if (authState.gender === 'F' && item.femaleVideo) {
+      return item.femaleVideo;
+    }
+    return item.gif || ''; // Fallback to gif if no gender-specific video
   };
 
   const renderSearchExerciseItem = ({ item, index }) => {
+    //set item.male_video or item.female_video to item.maleVideo or item.femaleVideo
+    item.maleVideo = item.male_video;
+    item.femaleVideo = item.female_video;
+    console.log("Rendering search exercise item:", item);
     if (!item) return null; // Skip rendering if item is null
     return(
     <TouchableOpacity style={styles.exerciseSearchItem} onPress={() => pressSearchItem(item)}>
        <View style={styles.searchImageWrapper}>
-        <Image source={{ uri: item.gif }} style={styles.gifImage} />
+        {getVideoSource(item).includes('.mp4') || getVideoSource(item).includes('.mov') ? (
+          <Video
+            source={{ uri: getVideoSource(item) }}
+            style={styles.gifImage}
+            resizeMode="cover"
+            repeat={true}
+            muted={true}
+            paused={false}
+            onError={(e) => console.log('Video loading error:', e)}
+          />
+        ) : (
+          <Image 
+            source={{ uri: getVideoSource(item) }} 
+            style={styles.gifImage}
+            onError={(e) => console.log('Image loading error:', e.nativeEvent.error)}
+          />
+        )}
       </View>
       <Text style={styles.exerciseText}>
         {item.name}
       </Text>
     </TouchableOpacity>
     )
-};
+  };
 
   const pressSearchItem = (item) => {
     setSelectedExercise(item);
@@ -106,20 +226,6 @@ const WorkoutPlanScreen = ({ navigation }) => {
     
   }
  
-  const searchExercises = (query) => {
-    if (query.length > 2) {
-      axios.get(backend_url + `exercises-search/?search=${query}`)
-        .then((response) => {
-          console.log(response.data);
-          setExerciseSearchResults(response.data);
-          //setIsModalVisible(true);  // Show the modal when results are available
-        });
-    } else {
-      setExerciseSearchResults([]); // Clear results if query is too short
-      //setIsModalVisible(false);
-    }
-  };
-
   const navigateToExerciseDetails = (exercise) => {
     navigation.navigate('ExerciseDetails', { exercise });
 }; 
@@ -130,7 +236,9 @@ const WorkoutPlanScreen = ({ navigation }) => {
   }, []);
 
   const handleDayChange = (day) => {
-    setSelectedDay(day);
+    const dayIndex = typeof day === 'string' ? daysOfWeek.indexOf(day) : day;
+    console.log(`Day selected: ${day}, converted to index: ${dayIndex}`);
+    setSelectedDay(dayIndex);
   };
 
   useEffect(() => {
@@ -138,23 +246,42 @@ const WorkoutPlanScreen = ({ navigation }) => {
       const currentPlan = workoutPlansData.find(plan => plan.value === selectedPlan);
       setSelectedWorkoutPlan(currentPlan);
       console.log("Current Plan:", currentPlan);
-      if (currentPlan) {
-        const workoutForDay = currentPlan.workoutSet.find(workout => parseInt(workout.day, 10) === selectedDay);
+      
+      if (currentPlan && currentPlan.workoutSet) {
+        const dayIndexStr = selectedDay.toString();
+        console.log(`Looking for workout with day: ${dayIndexStr}`);
+        // map the workoutexerciseSet and make th day one less (7-> 6, 6-> 5, 5-> 4, 4-> 3, 3-> 2, 2-> 1, 1-> 0) and change the workoutforday
+
+        // const mappedWorkoutExerciseSet = currentPlan.workoutexerciseSet.map(exercise => ({
+        //   ...exercise,
+        //   day: exercise.day - 1
+        // }));
+        
+        const workoutForDay = currentPlan.workoutSet.find(workout => workout.day === dayIndexStr);
+       
+        
+        console.log("Found workout:", workoutForDay);
+        //console.log("Found workout:", workoutForDay.workoutexerciseSet);
+        //console.log("Found workout exercise:", workoutForDay.workoutexerciseSet[0].exercise);
         setSelectedWorkout(workoutForDay);
-        console.log("Workout for Selected Day:", workoutForDay);
       }
     }
   }, [selectedPlan, selectedDay, workoutPlansData]);
 
   const handlePlanChange = (planValue) => {
     console.log("Plan Selected:", planValue);
-    setSelectedPlan(planValue); // Update selected plan
+    setSelectedPlan(planValue);
+    
     const currentPlan = workoutPlansData.find(plan => plan.value === planValue);
-    console.log("Current Plan 2:", currentPlan);
-    if (currentPlan) {
-      const workoutForDay = currentPlan.workoutSet.find(workout => parseInt(workout.day, 10) === daysOfWeek.indexOf(selectedDay));
+    if (currentPlan && currentPlan.workoutSet) {
+      const dayIndexStr = selectedDay.toString();
+      const workoutForDay = currentPlan.workoutSet.find(workout => workout.day === dayIndexStr);
+      
+      console.log(`Looking for workout for day ${dayIndexStr} after plan change`);
+      console.log("Found workout:", workoutForDay.workoutexerciseSet);
+      console.log("Found workout exercise:", workoutForDay.workoutexerciseSet[0].exercise);
+      
       setSelectedWorkout(workoutForDay);
-      console.log("Workout for Selected Day after Plan Change:", workoutForDay);
     }
   };
 
@@ -178,65 +305,68 @@ const WorkoutPlanScreen = ({ navigation }) => {
     // { iconType: 'Ionicons',iconName: 'information-circle-outline', label: 'Tips', onPress: () => navigation.navigate('TipsScreen') },
   ];
 
+  const handleCreateWorkout = () => {
+    if (checkSubscription('workout_plans')) {
+      navigation.navigate('CreateWorkout');
+    }
+  };
+
+  const handleViewWorkout = (workout) => {
+    if (checkSubscription('workout_plans')) {
+      navigation.navigate('WorkoutDetails', { workout });
+    }
+  };
+
   return (
-    <View style={styles.container}>
-      {/* <IconHeader /> */}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.container}>
+        {/* <ArrowHeaderNew navigation={navigation} title={"Workout Plans"} /> */}
+        
+        <SearchInput 
+          placeholder="Search workouts" 
+          search={searchExercises} 
+          results={exerciseSearchResults}
+          onSelect={pressSearchItem} 
+          renderSearchResultItem={renderSearchExerciseItem} 
+          categories={["Workouts"]}
+        />
 
-      <SearchInput placeholder="Search exercises, workouts" search={searchExercises} 
-        results={exerciseSearchResults}
-        onSelect={pressSearchItem} renderSearchResultItem={renderSearchExerciseItem} />
-       
-       <DaySelector selectedDay={selectedDay} onDaySelect={handleDayChange} />
-
-      <SectionHeader title="Your Workout Plans" />
-      <View style={{ flexDirection: "row", marginBottom: 20 }}>
-        {workoutPlansData.length > 0 ? (
-          <PlanDropdown label={"Change Workout Plan"} data={workoutPlansData} onSelect={handlePlanChange} />
-        ) : (
-          <Text>Loading workout plans...</Text>
-        )}
-        {/* <IconButton name='add' onPress={() => navigation.navigate('AddModifyPlan')} /> */}
-        <IconButton name='add' onPress={() =>  setModalVisible(true)} />
-
-      </View>
-
-      {/* New Section with two options */}
-      {/* <View style={styles.optionsContainer}>
-        <View style={styles.option}>
-          <TouchableOpacity style={styles.optionButton} onPress={() => navigation.navigate('UpdateWorkoutPlan', { workoutPlan: selectedWorkoutPlan })}>
-            <Text style={styles.buttonText}>Update Plan</Text>
+        {/*<View style={styles.buttonContainer}>
+          <TouchableOpacity 
+            style={styles.createButton} 
+            onPress={handleCreateWorkout}
+          >
+            <Text style={styles.buttonText}>Create Workout</Text>
           </TouchableOpacity>
+        </View>*/}
+
+        <DaySelector selectedDay={daysOfWeek[selectedDay]} onDaySelect={handleDayChange} />
+
+        <SectionHeader title="Your Workout Plans" />
+        <View style={{ flexDirection: "row", marginBottom: 20 }}>
+          {workoutPlansData.length > 0 ? (
+            <PlanDropdown label={"Change Workout Plan"} data={workoutPlansData} onSelect={handlePlanChange} />
+          ) : (
+            <Text>Loading workout plans...</Text>
+          )}
+          <IconButton name='add' onPress={() => setModalVisible(true)} />
         </View>
-         <View style={styles.option}>
-          <TouchableOpacity style={styles.optionButton} onPress={() => navigation.navigate('ExerciseSearch')}>
-            <Text style={styles.buttonText}>Find Exercise</Text>
-          </TouchableOpacity>
-        </View> 
-      </View> */}
 
-      
+        <SectionHeader title={`Workout for ${daysOfWeek[selectedDay]}`} childComponent={renderWorkout()}/>
 
-      <SectionHeader title={`Workout for ${daysOfWeek[selectedDay]}`} childComponent={renderWorkout()}/>
+        <OptionModal
+          isVisible={modalVisible}
+          options={options}
+          onClose={() => setModalVisible(false)}
+        />
 
-      <OptionModal
-        isVisible={modalVisible}
-        options={options}
-        onClose={() => setModalVisible(false)}
-      />
- 
-      <View style={styles.exerciseList}>
-        {/* Display additional exercise details or other information */}
-      </View> 
-
-      {/* <View style={{ flexDirection: "row", padding: 10 }}>
-        {workoutPlansData.length > 0 ? (
-          <PlanDropdown label={"Change Workout Plan"} data={workoutPlansData} onSelect={handlePlanChange} />
-        ) : (
-          <Text>Loading workout plans...</Text>
-        )}
-        <IconButton name='add' onPress={() => navigation.navigate('AddModifyPlan')} />
-      </View> */}
-    </View>
+        <SubscriptionModal
+          visible={showSubscriptionModal}
+          onClose={() => setShowSubscriptionModal(false)}
+          onSubscribe={handleSubscribe}
+        />
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -345,6 +475,24 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     marginBottom: 5,
+  },
+  buttonContainer: {
+    marginVertical: Platform.select({ ios: 20, android: 15 }),
+    marginHorizontal: Platform.select({ ios: 20, android: 15 }),
+    paddingHorizontal: Platform.select({ ios: 25, android: 10 }),
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Platform.select({ ios: 15, android: 10 }),
+    backgroundColor: '#333',
+    padding: Platform.select({ ios: 15, android: 10 }),
+    borderRadius: 5,
+  },
+  createButton: {
+    backgroundColor: COLORS.darkOrange,
+    paddingVertical: Platform.select({ ios: 10, android: 8 }),
+    paddingHorizontal: Platform.select({ ios: 15, android: 12 }),
+    borderRadius: 5,
   },
 });
 

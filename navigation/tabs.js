@@ -19,7 +19,6 @@ import { COLORS } from '../constants';
 import ProfileStack from '../pages/user/ProfileStack';
 // import Settings from '../pages/settings/Settings';
 import Spaces from '../pages/gyms/Spaces';
-import ChatbotScreen from '../pages/chat/ChatbotScreen';
 import AIStack from '../pages/chat/AIStack';
 import MainScreen from '../pages/user/Main';
 import Profile from '../pages/Profile';

@@ -72,6 +72,10 @@ const BodyAnalyzerScreen = () => {
           <Icon name="scan-outline" size={30} color="#fff" />
         </TouchableOpacity>
       </View>
+      
+      <Text style={styles.scanNote}>
+        📸 Tap to scan your body for AI-generated measurements
+      </Text>
         
       <View style={styles.measurementsContainer}>
         <View style={styles.card}>
@@ -97,7 +101,7 @@ const BodyAnalyzerScreen = () => {
       </View>
 
       {/* Additional buttons for other features */}
-      <View style={styles.additionalButtons}>
+      {/* <View style={styles.additionalButtons}>
         <TouchableOpacity
           style={styles.additionalButton}
           onPress={() => navigation.navigate('ChartsScreen')}
@@ -119,7 +123,7 @@ const BodyAnalyzerScreen = () => {
           <Icon name="information-circle-outline" size={25} color={COLORS.darkOrange} />
           <Text style={styles.buttonLabel}>Tips</Text>
         </TouchableOpacity>
-      </View>
+      </View> */}
     </View>
   </View>
   );
@@ -197,6 +201,11 @@ const styles = StyleSheet.create({
   },
   label: {
     marginTop: 5,
+    fontSize: 14,
+    color: '#777',
+  },
+  scanNote: {
+    marginBottom: 10,
     fontSize: 14,
     color: '#777',
   },

@@ -193,7 +193,7 @@ const CreateWorkoutPlanScreen = ({ navigation }) => {
   const workoutListData = Object.keys(workouts).map(day => ({ day, ...workouts[day] }));
 
   return (
-    <KeyboardAvoidingView 
+    <View
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
@@ -248,7 +248,7 @@ const CreateWorkoutPlanScreen = ({ navigation }) => {
           </View>
         </ScrollView>
       </View>
-    </KeyboardAvoidingView>
+      </View>
   );
 };
 

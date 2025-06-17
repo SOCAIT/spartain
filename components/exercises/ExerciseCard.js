@@ -1,20 +1,55 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image} from 'react-native'
-import React from 'react'
+import React, { useContext } from 'react'
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { AuthContext } from '../../helpers/AuthContext';
+import Video from 'react-native-video';
 
 const ExerciseCard = ({navigation, exerciseItem}) => {
+  const { authState } = useContext(AuthContext);
 
   const navigateToExerciseDetails = (exercise) => {
     navigation.navigate('ExerciseDetails', { exercise });
   }; 
 
+  const getVideoSource = () => {
+    console.log('Exercise Item:', exerciseItem);
+    console.log('Auth State Gender:', authState.gender);
+    console.log('Male Video:', exerciseItem.exercise.maleVideo);
+    console.log('Female Video:', exerciseItem.exercise.femaleVideo);
+    
+    if (authState.gender === 'M' && exerciseItem.exercise.maleVideo) {
+      return exerciseItem.exercise.maleVideo;
+    } else if (authState.gender === 'F' && exerciseItem.exercise.femaleVideo) {
+      return exerciseItem.exercise.femaleVideo;
+    }
+    return exerciseItem.exercise.gif; // Fallback to gif if no gender-specific video
+  };
+
+  const videoSource = getVideoSource();
+  console.log('Final Video Source:', videoSource);
+
+  const isVideo = videoSource && (videoSource.includes('.mp4') || videoSource.includes('.mov'));
+
   return (
     <View style={styles.workoutCard}>
           <View style={styles.imageContainer}>
+            {isVideo ? (
+              <Video
+                source={{ uri: videoSource }}
+                style={styles.workoutImage}
+                resizeMode="cover"
+                repeat={true}
+                muted={true}
+                paused={false}
+                onError={(e) => console.log('Video loading error:', e)}
+              />
+            ) : (
             <Image
-              source={{ uri: exerciseItem.exercise.gif }} // Replace with the actual workout image URL
+                source={{ uri: videoSource }}
               style={styles.workoutImage}
+                onError={(e) => console.log('Image loading error:', e.nativeEvent.error)}
             />
+            )}
           </View>
           <View style={styles.workoutDetails}>
             <Text style={styles.workoutTitle}>{exerciseItem.exercise.name}</Text>

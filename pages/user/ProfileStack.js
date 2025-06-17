@@ -7,6 +7,8 @@ import EditProfileScreen from './EditProfileNew';
 import MainScreen from './Main';
 import AnalyzeBodyScreen from '../chat/BodyAnalyzer';
 import ProSubscriptionScreen from '../SubscriptionDetails';
+import AnalyticalView from './AnalyticalView';
+import SettingsStack from '../settings/SettingsStack';
 // import ChangePassword from './ChangePassword'; // A screen to change the password
 
 const Stack = createNativeStackNavigator();
@@ -24,6 +26,8 @@ const ProfileStack = () => {
             <Stack.Screen name="Subscription" component={ProSubscriptionScreen} />
             <Stack.Screen name="UserReport" component={UserReportScreen} />
             <Stack.Screen name="BodyAnalyzer" component={AnalyzeBodyScreen} />
+            <Stack.Screen name="AnalyticalView" component={AnalyticalView} />
+            <Stack.Screen name="SettingsStack" component={SettingsStack} />
 
             {/* <Stack.Screen name="ChangePassword" component={ChangePassword} /> */}
         </Stack.Navigator>

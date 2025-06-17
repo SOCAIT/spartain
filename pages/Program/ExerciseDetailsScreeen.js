@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext, useCallback, useMemo } from 're
 import { View, Image, ScrollView, StyleSheet, Platform } from 'react-native';
 import axios from 'axios';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import Video from 'react-native-video';
 
 import { COLORS } from '../../constants';
 import { backend_url } from '../../config/config';
@@ -139,7 +140,34 @@ const ExerciseDetailsScreen = ({ route }) => {
       });
   }, [graphql_user_ex_logs, exerciseHistory, latestLogs]);
 
- 
+  const getVideoSource = () => {
+    console.log('Exercise:', exercise);
+    console.log('Auth State Gender:', authState.gender);
+    console.log('Male Video:', exercise.male_video);
+    console.log('Female Video:', exercise.female_video);
+
+    // the video might me either in the form  of male_video or maleVideo, same for female_video and FemaleVideo
+
+    
+    
+    if (authState.gender === 'M' && exercise.male_video) {
+      return exercise.male_video;
+    } else if (authState.gender === 'F' && exercise.female_video) {
+      return exercise.female_video;
+
+    } else if(exercise.maleVideo){
+      return exercise.maleVideo;
+    } else if(exercise.femaleVideo){
+      return exercise.femaleVideo;
+    }
+
+    return exercise.gif; // Fallback to gif if no gender-specific video
+  };
+
+  const videoSource = getVideoSource();
+  console.log('Final Video Source:', videoSource);
+
+  const isVideo = videoSource && (videoSource.includes('.mp4') || videoSource.includes('.mov'));
 
   // Initial data fetch on component mount
   useEffect(() => {
@@ -189,7 +217,25 @@ const ExerciseDetailsScreen = ({ route }) => {
       <ArrowHeaderNew navigation={navigation} title={exercise.name}/>
       <ScrollView contentContainerStyle={{ alignItems: 'center' }}> 
         <View style={styles.imageContainer}>
-          <Image source={{ uri: exercise.gif }} style={styles.gifImage} />
+          {isVideo ? (
+            <Video
+              source={{ uri: videoSource }}
+              //style={styles.gifImage}
+              resizeMode="cover"
+              //width={300}
+              height={300}
+              repeat={true}
+              muted={true}
+              paused={false}
+              onError={(e) => console.log('Video loading error:', e)}
+            />
+          ) : (
+            <Image 
+              source={{ uri: videoSource }} 
+              style={styles.gifImage}
+              onError={(e) => console.log('Image loading error:', e.nativeEvent.error)}
+            />
+          )}
         </View>
         <ButtonRow buttons={buttons} />
         {/* Passing refreshKey as key forces a re-render when data changes */}
@@ -234,13 +280,13 @@ const styles = StyleSheet.create({
   imageContainer: {
     borderRadius: 10,
     overflow: 'hidden', // Ensure the image is properly clipped to the border radius
-    width: '80%', // Set equal width and height for a perfect circle
-    height: 200,
+    width: '90%', // Set equal width and height for a perfect circle
+    height: 300,
     marginBottom: 20,
   },
   gifImage: {
-    // width: 300,
-    // height: 200,
+    width: 300,
+    height: 200,
     // marginBottom: 20,
 
     flex: 1,

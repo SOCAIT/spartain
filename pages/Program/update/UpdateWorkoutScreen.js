@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, FlatList, Alert, Image, Platform} from 'react-native';
 import axios from 'axios';
 import { COLORS, SIZES } from '../../../constants';
 import { backend_url } from '../../../config/config';
 import ArrowHeaderNew from '../../../components/ArrowHeaderNew';
+import { AuthContext } from '../../../helpers/AuthContext';
+import Video from 'react-native-video';
+import { useNavigation } from '@react-navigation/native';
+// import SearchInput from '../../../components/SearchInput';
 
-const UpdateWorkoutScreen = ({ route, navigation }) => {
+const UpdateWorkoutScreen = ({ route}) => {
   const { workout } = route.params;
+  const navigation = useNavigation();
+  const { authState } = useContext(AuthContext);
   const [workoutName, setWorkoutName] = useState(workout.name);
   const [exercises, setExercises] = useState(workout.workoutexerciseSet);
   const [currentExercise, setCurrentExercise] = useState({ name: '', sets: '', reps: '' });
@@ -56,8 +62,12 @@ const UpdateWorkoutScreen = ({ route, navigation }) => {
     if (query.length > 2) {
       axios.get(backend_url + `exercises-search/?search=${query}`)
         .then((response) => {
-          setExerciseSearchResults(response.data);
+          setExerciseSearchResults(response.data.results);
           setIsModalVisible(true);  // Show the modal when results are available
+        })
+        .catch((error) => {
+          console.error('Search error:', error);
+          Alert.alert('Error', 'Failed to search exercises. Please try again.');
         });
     } else {
       setExerciseSearchResults([]); // Clear results if query is too short
@@ -65,10 +75,35 @@ const UpdateWorkoutScreen = ({ route, navigation }) => {
     }
   };
 
+  const getVideoSource = (item) => {
+    if (authState.gender === 'M' && item.male_video) {
+      return item.male_video;
+    } else if (authState.gender === 'F' && item.female_video) {
+      return item.female_video;
+    }
+    return item.gif; // Fallback to gif if no gender-specific video
+  };
+
   const renderExerciseItem = ({ item, index }) => (
     <View style={styles.addedExerciseItem}>
      <View style={styles.imageWrapper}>
-        <Image source={{ uri: item.exercise.gif }} style={styles.gifImage} />
+        {getVideoSource(item.exercise).includes('.mp4') || getVideoSource(item.exercise).includes('.mov') ? (
+          <Video
+            source={{ uri: getVideoSource(item.exercise) }}
+            style={styles.gifImage}
+            resizeMode="cover"
+            repeat={true}
+            muted={true}
+            paused={false}
+            onError={(e) => console.log('Video loading error:', e)}
+          />
+        ) : (
+          <Image 
+            source={{ uri: getVideoSource(item.exercise) }} 
+            style={styles.gifImage}
+            onError={(e) => console.log('Image loading error:', e.nativeEvent.error)}
+          />
+        )}
       </View>
       <View style={styles.exerciseDetailsContainer}>
         <Text style={styles.exerciseText}>{item.exercise.name}</Text>
@@ -106,7 +141,25 @@ const UpdateWorkoutScreen = ({ route, navigation }) => {
 
   const renderSearchExerciseItem = ({ item, index }) => (
     <TouchableOpacity style={styles.exerciseSearchItem} onPress={() => pressSearchItem(item)}>
-      <Image source={{ uri: item.gif }} style={styles.gifImage} />
+      <View style={styles.searchImageWrapper}>
+        {getVideoSource(item).includes('.mp4') || getVideoSource(item).includes('.mov') ? (
+          <Video
+            source={{ uri: getVideoSource(item) }}
+            style={styles.gifImage}
+            resizeMode="cover"
+            repeat={true}
+            muted={true}
+            paused={false}
+            onError={(e) => console.log('Video loading error:', e)}
+          />
+        ) : (
+          <Image 
+            source={{ uri: getVideoSource(item) }} 
+            style={styles.gifImage}
+            onError={(e) => console.log('Image loading error:', e.nativeEvent.error)}
+          />
+        )}
+      </View>
       <Text style={styles.exerciseText}>
         {item.name}
       </Text>
@@ -331,6 +384,12 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     alignItems: 'center',
     marginTop: 20,
+  },
+  searchImageWrapper: {
+    width: 60,
+    height: 60,
+    borderRadius: 8, // Adjust the radius to make the image rounded
+    overflow: 'hidden', // Ensures the image respects the borderRadius
   },
 });
 

@@ -49,7 +49,7 @@ const get_key = (value, mapping) => {
 
 export default function EditProfileScreen({ route }) {
   const navigation = useNavigation();
-  const { authState, setAuthState } = useContext(AuthContext);
+  const { authState, setAuthState, deleteAccount } = useContext(AuthContext);
 
   
 
@@ -115,12 +115,84 @@ export default function EditProfileScreen({ route }) {
       });
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your data, including:\n\n• Profile information\n• Body measurements\n• Workout history\n• Nutrition data\n• Subscription details",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete Account",
+          style: "destructive",
+          onPress: () => confirmDeleteAccount()
+        }
+      ]
+    );
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      "Final Confirmation",
+      "This is your final warning. Deleting your account will permanently remove all your data and cannot be undone.\n\nAre you absolutely sure?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "I understand, delete my account",
+          style: "destructive",
+          onPress: () => performDeleteAccount()
+        }
+      ]
+    );
+  };
+
+  const performDeleteAccount = async () => {
+    try {
+      const result = await deleteAccount();
+      if (result.success) {
+        Alert.alert(
+          "Account Deleted",
+          "Your account has been successfully deleted. You will now be logged out.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                // Navigation will be handled automatically by auth state change
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          "Error",
+          result.error || "Failed to delete account. Please try again or contact support.",
+          [{ text: "OK" }]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        "An unexpected error occurred. Please try again or contact support.",
+        [{ text: "OK" }]
+      );
+    }
+  };
+
   return (
     <View style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-      <ArrowHeaderNew navigation={navigation} />
+      <ArrowHeaderNew 
+        navigation={navigation} 
+        rightIcon="settings"
+        onRightIconPress={() => navigation.navigate('SettingsStack')}
+      />
       <ScrollView>
         {/* Profile Picture Section */}
-        <TouchableOpacity style={styles.profilePicContainer} onPress={uploadProfilePicture}>
+        {/* <TouchableOpacity style={styles.profilePicContainer} onPress={uploadProfilePicture}>
           <Image
             source={{ uri: 'https://via.placeholder.com/100' }}
             style={styles.profilePic}
@@ -128,7 +200,7 @@ export default function EditProfileScreen({ route }) {
           <View style={styles.cameraIconContainer}>
             <MaterialIcons name="camera-alt" size={24} color="#FF6A00" />
           </View>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
         {/* Subscription Button */}
         <TouchableOpacity 
@@ -241,6 +313,12 @@ export default function EditProfileScreen({ route }) {
         <TouchableOpacity style={styles.continueButton} onPress={updateUser}>
           <Text style={styles.continueText}>Save</Text>
           <MaterialIcons name="arrow-forward" size={20} color="#FFF" style={styles.iconRight} />
+        </TouchableOpacity>
+
+        {/* Delete Account Button */}
+        <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
+          <MaterialIcons name="delete-forever" size={24} color="#FFF" style={styles.deleteIcon} />
+          <Text style={styles.deleteAccountText}>Delete Account</Text>
         </TouchableOpacity>
       </ScrollView>
 
@@ -467,6 +545,27 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   subscriptionButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  deleteAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FF4444',
+    borderWidth: 1,
+    borderColor: '#FF6666',
+    padding: 15,
+    borderRadius: 10,
+    marginHorizontal: 5,
+    marginBottom: 30,
+    marginTop: 20,
+  },
+  deleteIcon: {
+    marginRight: 10,
+  },
+  deleteAccountText: {
     color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',

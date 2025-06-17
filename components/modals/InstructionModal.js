@@ -7,7 +7,7 @@ const InstructionsModal = ({ visible, onClose, instructions }) => {
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.container}>
         <View style={styles.modalContent}>
-        {instructions.split(":")[1].split(",").map((item, index) => (
+        {instructions.split("|").map((item, index) => (
             <Text key={index} style={styles.modalText}>{(index+1) +". " +item}</Text>
 
         ))}

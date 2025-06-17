@@ -1,25 +1,41 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, Image} from 'react-native';
-import ArrowHeader from '../../components/ArrowHeader';
+import React, { useState, useContext } from 'react';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, Image, Platform } from 'react-native';
+import ArrowHeaderNew from '../../components/ArrowHeaderNew';
 import { COLORS } from '../../constants';
-
 import axios from 'axios';
 import { backend_url } from '../../config/config';
 import IconButton from '../../components/IconButton';
-import ArrowHeaderNew from '../../components/ArrowHeaderNew';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { AuthContext } from '../../helpers/AuthContext';
 
-const MealPlanScreen = ({ route, navigation }) => {
-  const { day, existingMeal,updateMeal } = route.params; // Get selected day from the route
+const getTargetNutrition = (targetNutritionObj) => {
+  const targetNutrition = {
+    calories: targetNutritionObj.target_calories || 0,
+    carbs: targetNutritionObj.target_carbs || 0,
+    proteins: targetNutritionObj.target_protein || 0,
+    fats: targetNutritionObj.target_fats || 0,
+  };
+  return targetNutrition;
+};
+
+const AddMealScreen = ({ route, navigation }) => {
+  const { day, existingMeal, updateMeal } = route.params;
+  const { authState } = useContext(AuthContext);
   const [meals, setMeals] = useState(existingMeal || []);
-  const [currentMeal, setCurrentMeal] = useState({ name: '', calories: '', carbs: '', proteins: '', fats: '' });
+  const [currentMeal, setCurrentMeal] = useState({ 
+    name: '', 
+    calories: '', 
+    carbs: '', 
+    proteins: '', 
+    fats: '',
+    recipe: '',
+    description: ''
+  });
   const [mealSearchResults, setMealSearchResults] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [targetNutrition, setTargetNutrition] = useState({ calories: 0, carbs: 0, proteins: 0, fats: 0 });
-
- // Function to calculate total nutritional values for the selected day
  const calculateTotalNutrition = () => {
-    const mealsForDay = meals[day] || [];
     return meals.reduce((acc, meal) => {
       return {
         calories: acc.calories + (parseFloat(meal.calories) || 0),
@@ -31,14 +47,18 @@ const MealPlanScreen = ({ route, navigation }) => {
   };
 
   const totalNutrition = calculateTotalNutrition();
+  const targetNutrition = getTargetNutrition(authState.target_nutrition_data);
 
-  const searchMeals = (query) => {
+  const searchMeals = async (query) => {
     if (query.length > 2) {
-      axios.get(`${backend_url}meal-search/?search=${query}`)
-        .then(response => {
-          setMealSearchResults(response.data);
-          setIsModalVisible(true);
-        });
+      try {
+        const response = await axios.get(`${backend_url}meal-search/?search=${query}`);
+        setMealSearchResults(response.data.results);
+        setIsModalVisible(true);
+      } catch (error) {
+        console.error('Error searching meals:', error);
+        Alert.alert('Error', 'Failed to search meals');
+      }
     } else {
       setMealSearchResults([]);
       setIsModalVisible(false);
@@ -47,95 +67,139 @@ const MealPlanScreen = ({ route, navigation }) => {
 
   const addMeal = () => {
     if (!currentMeal.name || !currentMeal.calories) {
-      Alert.alert('Error', 'Please fill out all meal details');
+      Alert.alert('Error', 'Please select a meal from the search results');
       return;
     }
 
-    setMeals([...meals, currentMeal]);
-    setCurrentMeal({ name: '', calories: '', carbs: '', proteins: '', fats: '' });
+    setMeals(prevMeals => [...prevMeals, currentMeal]);
+    setCurrentMeal({ 
+      name: '', 
+      calories: '', 
+      carbs: '', 
+      proteins: '', 
+      fats: '',
+      recipe: '',
+      description: ''
+    });
+    setIsModalVisible(false);
   };
 
   const removeMeal = (index) => {
-    const updatedMeals = meals.filter((_, i) => i !== index);
-    setMeals(updatedMeals);
+    Alert.alert(
+      'Remove Meal',
+      'Are you sure you want to remove this meal?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Remove', 
+          style: 'destructive',
+          onPress: () => {
+            setMeals(prevMeals => prevMeals.filter((_, i) => i !== index));
+          }
+        }
+      ]
+    );
   };
 
   const pressSearchItem = (item) => {
-    setCurrentMeal({ ...currentMeal, name: item.name, id: item.id, calories: item.calories, carbs: item.carbs, proteins: item.proteins, fats: item.fats, recipe: item.recipe, description: item.description });
+    setCurrentMeal({
+      name: item.name,
+      id: item.id,
+      calories: item.calories || '0',
+      carbs: item.carbs || '0',
+      proteins: item.proteins || '0',
+      fats: item.fats || '0',
+      recipe: item.recipe || '',
+      description: item.description || '',
+      image: item.image
+    });
     setIsModalVisible(false);
   };
 
   const renderMealItem = ({ item, index }) => (
     <View style={styles.mealCard}>
-      <Image source={{ uri: item.image || 'https://via.placeholder.com/150' }} style={styles.mealImage} />
       <View style={styles.mealInfo}>
         <Text style={styles.mealName}>{item.name}</Text>
+        <View style={styles.nutritionInfo}>
         <Text style={styles.mealDetails}>Calories: {item.calories} kcal</Text>
+          <Text style={styles.mealDetails}>Carbs: {item.carbs}g</Text>
+          <Text style={styles.mealDetails}>Protein: {item.proteins}g</Text>
+          <Text style={styles.mealDetails}>Fats: {item.fats}g</Text>
+        </View>
       </View>
-      <TouchableOpacity style={styles.removeButton} onPress={() => removeMeal( index)}>
-        <Text style={styles.removeButtonText}>✕</Text>
+      <TouchableOpacity 
+        style={styles.removeButton} 
+        onPress={() => removeMeal(index)}
+      >
+        <MaterialIcons name="delete" size={24} color={COLORS.white} />
       </TouchableOpacity>
     </View>
   );
 
   const renderSearchMealItem = ({ item }) => (
-    <TouchableOpacity style={styles.mealSearchItem} onPress={() => pressSearchItem(item)}>
-      <Image source={{ uri: item.image || 'https://via.placeholder.com/150' }} style={styles.mealImage} />
+    <TouchableOpacity 
+      style={styles.mealSearchItem} 
+      onPress={() => pressSearchItem(item)}
+    >
       <View style={styles.mealInfo}>
-        <Text style={{ color: "#fff" }}>{item.name}</Text>
-        <Text style={{ color: "#fff" }}>Calories: {item.calories} kcal</Text>
+        <Text style={styles.searchMealName}>{item.name}</Text>
+        <Text style={styles.searchMealDetails}>
+          Calories: {item.calories} kcal | Carbs: {item.carbs}g | Protein: {item.proteins}g | Fats: {item.fats}g
+        </Text>
       </View>
     </TouchableOpacity>
   );
 
   const saveMealsAndGoBack = () => {
-    if (meals.length > 0) {
-      updateMeal(day, meals); // Pass all meals to the parent component
-      navigation.goBack(); // Navigate back to the previous screen
-    } else {
+    if (meals.length === 0) {
       Alert.alert('Error', 'Please add at least one meal');
+      return;
     }
+    updateMeal(day, meals);
+    navigation.goBack();
   };
 
   return (
     <View style={styles.container}>
       <ArrowHeaderNew navigation={navigation} title={`Meal Plan for ${day}`} />
 
-      {/* Total Nutrition Comparison */}
       <View style={styles.totalNutritionContainer}>
         <Text style={styles.totalTitle}>Total Nutrition for {day}</Text>
-        <Text style={styles.totalInfo}>Calories: {totalNutrition.calories} kcal / Target: {targetNutrition.calories} kcal</Text>
-        <Text style={styles.totalInfo}>Carbs: {totalNutrition.carbs} g / Target: {targetNutrition.carbs} g</Text>
-        <Text style={styles.totalInfo}>Proteins: {totalNutrition.proteins} g / Target: {targetNutrition.proteins} g</Text>
-        <Text style={styles.totalInfo}>Fats: {totalNutrition.fats} g / Target: {targetNutrition.fats} g</Text>
+        <View style={styles.nutritionRow}>
+          <Text style={styles.totalInfo}>Calories:</Text>
+          <Text style={styles.totalValue}>{totalNutrition.calories} / {targetNutrition.calories} kcal</Text>
+        </View>
+        <View style={styles.nutritionRow}>
+          <Text style={styles.totalInfo}>Carbs:</Text>
+          <Text style={styles.totalValue}>{totalNutrition.carbs} / {targetNutrition.carbs} g</Text>
+        </View>
+        <View style={styles.nutritionRow}>
+          <Text style={styles.totalInfo}>Proteins:</Text>
+          <Text style={styles.totalValue}>{totalNutrition.proteins} / {targetNutrition.proteins} g</Text>
+        </View>
+        <View style={styles.nutritionRow}>
+          <Text style={styles.totalInfo}>Fats:</Text>
+          <Text style={styles.totalValue}>{totalNutrition.fats} / {targetNutrition.fats} g</Text>
+        </View>
       </View>
 
-      <View style={styles.row}>
+      <View style={styles.searchContainer}>
         <TextInput
-          style={[styles.input, styles.largeInput]}
-          placeholder="Meal Name"
+          style={styles.searchInput}
+          placeholder="Search for meals..."
           placeholderTextColor="#aaa"
           value={currentMeal.name}
           onChangeText={(text) => {
-            setCurrentMeal({ ...currentMeal, name: text })
-            searchMeals(text)
-        
-          }
-        }
+            setCurrentMeal(prev => ({ ...prev, name: text }));
+            searchMeals(text);
+          }}
         />
-        {/* <TextInput
-          style={[styles.input, styles.largeInput]}
-          placeholder="Calories"
-          placeholderTextColor="#aaa"
-          value={currentMeal.calories}
-          keyboardType="numeric"
-          onChangeText={(text) => setCurrentMeal({ ...currentMeal, calories: text })}
-        /> */}
-        {/* <TouchableOpacity style={styles.addButton} onPress={addMeal}>
-          <Text style={styles.buttonText}>+</Text>
-        </TouchableOpacity> */}
-
-        <IconButton name='add' onPress={addMeal} />
+        <IconButton 
+          name="add" 
+          onPress={addMeal}
+          style={styles.addButton}
+          disabled={!currentMeal.name}
+        />
       </View>
 
       {isModalVisible && (
@@ -145,6 +209,7 @@ const MealPlanScreen = ({ route, navigation }) => {
             renderItem={renderSearchMealItem}
             keyExtractor={(item) => item.id.toString()}
             style={styles.mealList}
+            keyboardShouldPersistTaps="handled"
           />
         </View>
       )}
@@ -153,10 +218,18 @@ const MealPlanScreen = ({ route, navigation }) => {
         data={meals}
         renderItem={renderMealItem}
         keyExtractor={(item, index) => index.toString()}
+        style={styles.mealList}
+        contentContainerStyle={styles.mealListContent}
       />
 
-        <TouchableOpacity style={styles.saveButton} onPress={saveMealsAndGoBack}>
-                <Text style={styles.buttonText}>Save Workout</Text>
+      <TouchableOpacity 
+        style={[styles.saveButton, isLoading && styles.disabledButton]} 
+        onPress={saveMealsAndGoBack}
+        disabled={isLoading}
+      >
+        <Text style={styles.buttonText}>
+          {isLoading ? 'Saving...' : 'Save Meals'}
+        </Text>
         </TouchableOpacity>
     </View>
   );
@@ -165,141 +238,141 @@ const MealPlanScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.primary,
-    padding: 20,
+    backgroundColor: COLORS.dark,
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 45 : 10,
   },
-  row: {
+  totalNutritionContainer: {
+    backgroundColor: COLORS.lightDark,
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+  totalTitle: {
+    fontSize: 18,
+    color: COLORS.white,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  nutritionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  totalInfo: {
+    fontSize: 14,
+    color: COLORS.white,
+  },
+  totalValue: {
+    fontSize: 14,
+    color: COLORS.darkOrange,
+    fontWeight: '500',
+  },
+  searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 20,
   },
-
-  targetNutritionContainer: {
-    marginBottom: 20,
-    padding: 10,
-    backgroundColor: '#2b2b2b',
-    borderRadius: 5,
-  },
-  totalNutritionContainer: {
-    marginBottom: 20,
-    padding: 10,
-    backgroundColor: '#2b2b2b',
-    borderRadius: 5,
-  },
-  targetTitle: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  totalTitle: {
-    fontSize: 16,
-    color: '#fff',
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  targetInfo: {
-    fontSize: 14,
-    color: '#fff',
-  },
-  totalInfo: {
-    fontSize: 14,
-    color: '#fff',
-  },
-  input: {
-    backgroundColor: '#eee',
-    color: '#333',
-    padding: 10,
-    borderRadius: 5,
+  searchInput: {
+    flex: 1,
+    backgroundColor: COLORS.lightDark,
+    color: COLORS.white,
+    padding: 15,
+    borderRadius: 12,
     marginRight: 10,
-    flex: 1,
-  },
-  largeInput: {
-    flex: 1,
+    fontSize: 16,
   },
   addButton: {
-    backgroundColor: '#4caf50',
-    borderRadius: 5,
-    padding: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: COLORS.darkOrange,
+    borderRadius: 12,
+    padding: 12,
   },
-  buttonText: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
+  modalContainer: {
+    backgroundColor: COLORS.lightDark,
+    borderRadius: 12,
+    padding: 15,
+    maxHeight: 300,
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    top: 200,
+    zIndex: 1000,
+    elevation: 5,
   },
   mealCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f1f1f1',
+    backgroundColor: COLORS.lightDark,
     padding: 15,
-    borderRadius: 10,
+    borderRadius: 12,
     marginBottom: 10,
+  },
+  mealInfo: {
+    flex: 1,
   },
   mealName: {
     fontSize: 16,
+    color: COLORS.white,
     fontWeight: 'bold',
-    flex: 1,
+    marginBottom: 5,
   },
-  mealInfo: {
-    flex: 1
+  nutritionInfo: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
-
   mealDetails: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 12,
+    color: COLORS.white,
     marginRight: 10,
+    marginBottom: 2,
   },
-
   mealSearchItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2b2b2b',
-    padding: 15,
-    borderRadius: 5,
-    marginBottom: 10,
+    backgroundColor: COLORS.dark,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
   },
-  mealImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 10,
-    marginRight: 15,
+  searchMealName: {
+    fontSize: 14,
+    color: COLORS.white,
+    fontWeight: '500',
+    marginBottom: 4,
   },
- 
-  modalContainer: {
-    backgroundColor: '#2b2b2b',
-    borderRadius: 5,
-    padding: 10,
-    maxHeight: 500,
-    position: 'absolute',
-    minHeight: 200,
-    left: 20,
-    right: 20,
-    zIndex: 1000,
+  searchMealDetails: {
+    fontSize: 12,
+    color: COLORS.white,
+    opacity: 0.7,
   },
-  
-
   removeButton: {
     backgroundColor: '#ff4d4d',
-    borderRadius: 5,
+    borderRadius: 8,
     padding: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginLeft: 10,
   },
-  removeButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-
   saveButton: {
-    backgroundColor: '#4caf50',
+    backgroundColor: COLORS.darkOrange,
     paddingVertical: 15,
-    borderRadius: 5,
+    borderRadius: 12,
     alignItems: 'center',
     marginTop: 20,
+    marginBottom: 20,
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  buttonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  mealList: {
+    flex: 1,
+  },
+  mealListContent: {
+    paddingBottom: 20,
   },
 });
 
-export default MealPlanScreen;
+export default AddMealScreen;

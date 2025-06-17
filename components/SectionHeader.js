@@ -20,6 +20,7 @@ const SectionHeader = ({title, childComponent}) => {
 const styles = StyleSheet.create({
     sectionContainer: {
         padding: 10,
+       
       },
       sectionHeader: {
         flexDirection: 'row',

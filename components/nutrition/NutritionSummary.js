@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { COLORS } from '../../constants';
 import CircularProgress from '../charts/CircularProgress';
+import InfoIcon from '../InfoIcon';
 
 const NutritionSummary = ({ currentNutrition, targetNutrition, navigation }) => {
   // Calculate percentage (floor percentage, or 0 if no target)
@@ -28,9 +29,12 @@ const NutritionSummary = ({ currentNutrition, targetNutrition, navigation }) => 
       {/* Main Summary for Calories */}
       <View style={styles.nutritionSummary}>
         <View style={styles.nutritionTextContainer}>
-          <Text style={styles.nutritionValue}>
-            {currentNutrition.calories} / {targetNutrition.calories}
-          </Text>
+          <View style={styles.valueWithIcon}>
+            <Text style={styles.nutritionValue}>
+              {currentNutrition.calories} / {targetNutrition.calories}
+            </Text>
+            <InfoIcon type="calories" size={14} />
+          </View>
           <Text style={styles.nutritionLabel}>CALORIES (kcal)</Text>
         </View>
         <CircularProgress
@@ -49,9 +53,12 @@ const NutritionSummary = ({ currentNutrition, targetNutrition, navigation }) => 
         {/* Carbs */}
         <View style={styles.nutritionDetailItem}>
           <View style={styles.nutritionDetailText}>
-            <Text style={styles.nutritionDetailValue}>
-              {currentNutrition.carbs} / {targetNutrition.carbs}
-            </Text>
+            <View style={styles.valueWithIcon}>
+              <Text style={styles.nutritionDetailValue}>
+                {currentNutrition.carbs} / {targetNutrition.carbs}
+              </Text>
+              <InfoIcon type="macronutrients" size={12} />
+            </View>
             <Text style={styles.nutritionDetailLabel}>Carbs (g)</Text>
           </View>
           <CircularProgress
@@ -67,9 +74,12 @@ const NutritionSummary = ({ currentNutrition, targetNutrition, navigation }) => 
         {/* Proteins */}
         <View style={styles.nutritionDetailItem}>
           <View style={styles.nutritionDetailText}>
-            <Text style={styles.nutritionDetailValue}>
-              {currentNutrition.proteins} / {targetNutrition.proteins} 
-            </Text>
+            <View style={styles.valueWithIcon}>
+              <Text style={styles.nutritionDetailValue}>
+                {currentNutrition.proteins} / {targetNutrition.proteins} 
+              </Text>
+              <InfoIcon type="macronutrients" size={12} />
+            </View>
             <Text style={styles.nutritionDetailLabel}>Protein g</Text>
           </View>
           <CircularProgress
@@ -81,14 +91,16 @@ const NutritionSummary = ({ currentNutrition, targetNutrition, navigation }) => 
             strokeWidth={3}
             color={COLORS.darkOrange}
             />
-        {/* </View> */}
         </View>
         {/* Fats */}
         <View style={styles.nutritionDetailItem}>
           <View style={styles.nutritionDetailText}>
-            <Text style={styles.nutritionDetailValue}>
-              {currentNutrition.fats} / {targetNutrition.fats} 
-            </Text>
+            <View style={styles.valueWithIcon}>
+              <Text style={styles.nutritionDetailValue}>
+                {currentNutrition.fats} / {targetNutrition.fats} 
+              </Text>
+              <InfoIcon type="macronutrients" size={12} />
+            </View>
             <Text style={styles.nutritionDetailLabel}>Fats (g)</Text>
           </View>
           <CircularProgress
@@ -152,6 +164,10 @@ const styles = StyleSheet.create({
   },
   nutritionTextContainer: {
     flexDirection: 'column',
+  },
+  valueWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   nutritionValue: {
     fontSize: 18,

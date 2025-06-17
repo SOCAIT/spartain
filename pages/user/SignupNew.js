@@ -1,177 +1,244 @@
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, ImageBackground, StyleSheet } from 'react-native';
+import { View, TouchableWithoutFeedback, Keyboard, Text, TextInput, TouchableOpacity, ImageBackground, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useState, useEffect,useContext } from "react";
+import { useState, useEffect, useContext } from "react";
 import axios from "axios";
-import {AuthContext} from "../../helpers/AuthContext"
+import { AuthContext } from "../../helpers/AuthContext"
 import { backend_url } from '../../config/config';
-// import { SafeAreaView } from 'react-native-safe-area-context';
 import { useForm, Controller } from 'react-hook-form';
+import { COLORS, SIZES, FONTS } from "../../constants"
 
-import {COLORS, SIZES, FONTS} from "../../constants"
-export default function SignUpScreen({navigation }) {
-  // State variables for form fields and error handling
-  const [username, setUsername] = useState("");
-
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordsMatch, setPasswordsMatch] = useState(true);
+export default function SignUpScreen({ navigation }) {
+  const { setAuthState } = useContext(AuthContext);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const {setAuthState} = useContext(AuthContext)
+  const { control, handleSubmit, watch, formState: { errors } } = useForm({
+    defaultValues: {
+      username: '',
+      email: '',
+      password: '',
+      confirmPassword: ''
+    },
+    mode: 'onChange'
+  });
 
+  const password = watch('password');
+  const confirmPassword = watch('confirmPassword');
 
-  const { register, setValue, handleSubmit, control, reset, formState: { errors,isValid } } = useForm({mode: 'onBlur'});
+  const sign_up = async (data) => {
+    if (data.password !== data.confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
 
-  // Function to handle password confirmation check
-  const handlePasswordMatch = () => {
-    setPasswordsMatch(password === confirmPassword);
+    console.log(data);
+    // keep email, username, password and remove confirmPassword
+    const { confirmPassword, ...rest } = data;
+    console.log(rest);
+
+    data = rest;
+
+    setIsLoading(true);
+    try {
+      const response = await axios.post(`${backend_url}user/create/`, {
+        username: data.username,
+        email: data.email,
+        password: data.password
+      });
+
+      if (response.data.error) {
+        Alert.alert('Error', response.data.error);
+      } else {
+        setAuthState({
+          username: response.data.username,
+          id: response.data.id,
+          status: true
+        });
+        navigation.navigate("tabs");
+      }
+    } catch (error) {
+      Alert.alert('Error', error.response?.data?.error || 'Failed to sign up. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const sign_up = data => {
-    //let data ={username: username, password: password, email: email}
-    console.log(data)
-    axios.post(backend_url + "users/", data).then((response) =>{
-      if (response.data.error) 
-      {alert(response.data.error);
-       }
-      else {
-      console.log("Successfully Summoned")
-      setAuthState({username:response.data.username,id: response.data.id,status:true});
-      navigation.navigate("tabs");
-      }
-    });
-  }
-
   return (
-    // <ImageBackground source={require('./path/to/your/background-image.png')} style={styles.imageBackground}>
-    <View style={styles.background}>
-      <View style={styles.overlay} />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.background}>
+        <View style={styles.overlay} />
 
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <MaterialIcons name="fitness-center" size={40} color="#FF6A00" />
-          <Text style={styles.title}>Sign Up For Free</Text>
-          <Text style={styles.subtitle}>Quickly make your account in 1 minute</Text>
-        </View>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <MaterialIcons name="fitness-center" size={40} color="#FF6A00" />
+            <Text style={styles.title}>Sign Up For Free</Text>
+            <Text style={styles.subtitle}>Quickly make your account in 1 minute</Text>
+          </View>
 
-        {/* Username Input*/}
-        <View style={styles.inputContainer}>
-          <Icon name="envelope" size={20} color="#FF6A00" style={styles.icon} />
-
-          <Controller
-            control={control}
-            name="username"
-            render={({field:{onChange, value, onBlur}}) =>(
-              <TextInput
-                placeholder="Username"
-                placeholderTextColor="#FFF"
-                style={styles.input}
-                keyboardType="email-address"
-                value={username}
-                onChangeText={setUsername}
-              />
-          )} 
-          />
-        </View>
-
-        {/* Email Input */}
-        <View style={styles.inputContainer}>
-          <Icon name="envelope" size={20} color="#FF6A00" style={styles.icon} />
-          <Controller
-            control={control}
-            name="email"
-            render={({field:{onChange, value, onBlur}}) =>(
-              <TextInput
-                placeholder="Email Address"
-                placeholderTextColor="#FFF"
-                style={styles.input}
-                keyboardType="email-address"
-                value={email}
-                onChangeText={setEmail}
-              />
-            )}
-          />
-        </View>
-
-        {/* Password Input */}
-        <View style={styles.inputContainer}>
-          <Icon name="lock" size={20} color="#FF6A00" style={styles.icon} />
-          <Controller
-            control={control}
-            name="password"
-            render={({field:{onChange, value, onBlur}}) =>(
-              <TextInput
-                placeholder="Password"
-                placeholderTextColor="#FFF"
-                style={styles.input}
-                secureTextEntry={showPassword}
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  handlePasswordMatch();
-                }}
-              />
-            )}
+          {/* Username Input */}
+          <View style={[styles.inputContainer, errors.username && styles.errorBorder]}>
+            <Icon name="user" size={20} color="#FF6A00" style={styles.icon} />
+            <Controller
+              control={control}
+              name="username"
+              rules={{
+                required: 'Username is required',
+                minLength: {
+                  value: 3,
+                  message: 'Username must be at least 3 characters'
+                }
+              }}
+              render={({ field: { onChange, value, onBlur } }) => (
+                <TextInput
+                  placeholder="Username"
+                  placeholderTextColor="#FFF"
+                  style={styles.input}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                />
+              )}
             />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-             <MaterialIcons name="visibility-off" size={20} color="#FF6A00" style={styles.iconRight}   />
+          </View>
+          {errors.username && (
+            <Text style={styles.errorText}>{errors.username.message}</Text>
+          )}
+
+          {/* Email Input */}
+          <View style={[styles.inputContainer, errors.email && styles.errorBorder]}>
+            <Icon name="envelope" size={20} color="#FF6A00" style={styles.icon} />
+            <Controller
+              control={control}
+              name="email"
+              rules={{
+                required: 'Email is required',
+                pattern: {
+                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                  message: 'Invalid email address'
+                }
+              }}
+              render={({ field: { onChange, value, onBlur } }) => (
+                <TextInput
+                  placeholder="Email Address"
+                  placeholderTextColor="#FFF"
+                  style={styles.input}
+                  keyboardType="email-address"
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                />
+              )}
+            />
+          </View>
+          {errors.email && (
+            <Text style={styles.errorText}>{errors.email.message}</Text>
+          )}
+
+          {/* Password Input */}
+          <View style={[styles.inputContainer, errors.password && styles.errorBorder]}>
+            <Icon name="lock" size={20} color="#FF6A00" style={styles.icon} />
+            <Controller
+              control={control}
+              name="password"
+              rules={{
+                required: 'Password is required',
+                minLength: {
+                  value: 6,
+                  message: 'Password must be at least 6 characters'
+                }
+              }}
+              render={({ field: { onChange, value, onBlur } }) => (
+                <TextInput
+                  placeholder="Password"
+                  placeholderTextColor="#FFF"
+                  style={styles.input}
+                  secureTextEntry={!showPassword}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                />
+              )}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <MaterialIcons
+                name={showPassword ? "visibility" : "visibility-off"}
+                size={20}
+                color="#FF6A00"
+                style={styles.iconRight}
+              />
+            </TouchableOpacity>
+          </View>
+          {errors.password && (
+            <Text style={styles.errorText}>{errors.password.message}</Text>
+          )}
+
+          {/* Confirm Password Input */}
+          <View style={[styles.inputContainer, errors.confirmPassword && styles.errorBorder]}>
+            <Icon name="lock" size={20} color="#FF6A00" style={styles.icon} />
+            <Controller
+              control={control}
+              name="confirmPassword"
+              rules={{
+                required: 'Please confirm your password',
+                validate: value => value === password || 'Passwords do not match'
+              }}
+              render={({ field: { onChange, value, onBlur } }) => (
+                <TextInput
+                  placeholder="Confirm Password"
+                  placeholderTextColor="#FFF"
+                  style={styles.input}
+                  secureTextEntry={!showConfirmPassword}
+                  value={value}
+                  onChangeText={onChange}
+                  onBlur={onBlur}
+                />
+              )}
+            />
+            <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+              <MaterialIcons
+                name={showConfirmPassword ? "visibility" : "visibility-off"}
+                size={20}
+                color="#FF6A00"
+                style={styles.iconRight}
+              />
+            </TouchableOpacity>
+          </View>
+          {errors.confirmPassword && (
+            <Text style={styles.errorText}>{errors.confirmPassword.message}</Text>
+          )}
+
+          {/* Sign Up Button */}
+          <TouchableOpacity 
+            style={[styles.signUpButton, isLoading && styles.disabledButton]} 
+            onPress={handleSubmit(sign_up)}
+            disabled={isLoading}
+          >
+            <Text style={styles.signUpText}>
+              {isLoading ? 'Signing Up...' : 'Sign Up'}
+            </Text>
+            {!isLoading && <MaterialIcons name="arrow-forward" size={20} color="#FFF" style={styles.iconRight} />}
           </TouchableOpacity>
-        </View>
 
-        {/* Confirm Password Input */}
-        <View style={[styles.inputContainer, !passwordsMatch && styles.errorBorder]}>
-          <Icon name="lock" size={20} color="#FF6A00" style={styles.icon} />
-          <TextInput
-            placeholder="Confirm Password"
-            placeholderTextColor="#FFF"
-            style={styles.input}
-            secureTextEntry={showPassword}
-            value={confirmPassword}
-            onChangeText={(text) => {
-              setConfirmPassword(text);
-              handlePasswordMatch();
-            }}
-            // onEndEditing={() => handlePasswordMatch()} // Check match when user finishes editing confirm password
-          />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <MaterialIcons name="visibility-off" size={20} color="#FF6A00" style={styles.iconRight}   />
-          </TouchableOpacity>
-        </View>
-
-        {/* Error Message */}
-        {!passwordsMatch && (
-          <Text style={styles.errorMessage}>ERROR: Passwords Don’t Match!</Text>
-        )}
-
-        {/* Sign Up Button */}
-        <TouchableOpacity style={styles.signUpButton} onPress={handleSubmit(sign_up) }>
-          <Text style={styles.signUpText}>Sign Up</Text>
-          <MaterialIcons name="arrow-forward" size={20} color="#FFF" style={styles.iconRight} />
-        </TouchableOpacity>
-
-        {/* Footer Links */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-            <Text style={styles.linkText}>Sign In</Text>
-          </TouchableOpacity>
+          {/* Footer Links */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Already have an account? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+              <Text style={styles.linkText}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
-    {/* </ImageBackground> */}
-    </View>
+    </TouchableWithoutFeedback>
   );
 }
 
 const styles = StyleSheet.create({
   background: {
     flex: 1,
-  },
-  imageBackground: {
-    flex: 1,
-    resizeMode: 'cover',
+    backgroundColor: '#1e1e1e',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -184,7 +251,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 30,
   },
   title: {
     color: '#FFF',
@@ -202,7 +269,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#333',
     borderRadius: 10,
     paddingHorizontal: 10,
-    marginBottom: 15,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  errorBorder: {
+    borderColor: '#FF0000',
   },
   icon: {
     marginRight: 10,
@@ -210,20 +282,17 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     color: '#FFF',
-    height: 40,
+    height: 50,
+    fontSize: 16,
   },
   iconRight: {
     marginLeft: 10,
   },
-  errorBorder: {
-    borderColor: '#FF0000',
-    borderWidth: 1,
-  },
-  errorMessage: {
+  errorText: {
     color: '#FF0000',
     fontSize: 12,
-    marginBottom: 15,
-    textAlign: 'center',
+    marginBottom: 10,
+    marginLeft: 5,
   },
   signUpButton: {
     flexDirection: 'row',
@@ -231,8 +300,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FF6A00',
     borderRadius: 10,
-    paddingVertical: 10,
+    paddingVertical: 15,
+    marginTop: 20,
     marginBottom: 20,
+  },
+  disabledButton: {
+    backgroundColor: '#666',
   },
   signUpText: {
     color: '#FFF',
@@ -243,7 +316,7 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: 20,
   },
   footerText: {
     color: '#FFF',

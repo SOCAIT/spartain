@@ -1,12 +1,8 @@
-import { View, Text } from 'react-native'
+import { View, Text, useWindowDimensions } from 'react-native'
 import React, {useState, useEffect} from 'react'
-
-import { Dimensions } from "react-native";
-const screenWidth = Dimensions.get("window").width;
 
 import {
     LineChart,
-    
   } from "react-native-chart-kit";
 import { COLORS } from '../../constants';
 
@@ -46,25 +42,27 @@ const chartConfig = {
   };
 
 const CustomLineChart = ({chart_data}) => {
-
+  const { width } = useWindowDimensions();
+  
+  // Set a fixed width that works well on all devices
+  const chartWidth = Math.min(300, width - 40);
  
   return (
-    <View>
+    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
       <LineChart
-           data={chart_data}
-           width={screenWidth * 0.8}
-           height={256}
-           verticalLabelRotation={0}
-           chartConfig={chartConfig}
-           style={{ 
-            borderRadius: 15
-          }}
-           bezier
-           withInnerLines={false}
-           withOuterLines={false}
-           withDots={false}
-
-        />
+        data={chart_data}
+        width={chartWidth}
+        height={220}
+        verticalLabelRotation={0}
+        chartConfig={chartConfig}
+        style={{ 
+          borderRadius: 15
+        }}
+        bezier
+        withInnerLines={false}
+        withOuterLines={false}
+        withDots={false}
+      />
     </View>
   )
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 
 
-import { View, Text,TextInput, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
+import { View, Text,TextInput, StyleSheet, FlatList, TouchableOpacity, Image, Alert } from 'react-native';
 import StylishCard from '../../components/StylishCard';
 import { useNavigation } from '@react-navigation/native';
 
@@ -17,6 +17,7 @@ import { AuthContext } from '../../helpers/AuthContext';
 
 import axios from 'axios';
 import { set } from 'react-hook-form';
+import Video from 'react-native-video';
 
 
 
@@ -32,10 +33,35 @@ const ExerciseSearch = () => {
       navigation.navigate('ExerciseDetails', { exercise });
   }; 
 
+  const getVideoSource = (item) => {
+    if (authState.gender === 'M' && item.male_video) {
+      return item.male_video;
+    } else if (authState.gender === 'F' && item.female_video) {
+      return item.female_video;
+    }
+    return item.gif; // Fallback to gif if no gender-specific video
+  }; 
+
   const renderExerciseItem = ({ item, index }) => (
       <View style={styles.addedExerciseItem}>
         <View style={styles.imageWrapper}>
-          <Image source={{ uri: item.gif }} style={styles.gifImage} />
+          {getVideoSource(item).includes('.mp4') || getVideoSource(item).includes('.mov') ? (
+            <Video
+              source={{ uri: getVideoSource(item) }}
+              style={styles.gifImage}
+              resizeMode="cover"
+              repeat={true}
+              muted={true}
+              paused={false}
+              onError={(e) => console.log('Video loading error:', e)}
+            />
+          ) : (
+            <Image 
+              source={{ uri: getVideoSource(item) }} 
+              style={styles.gifImage}
+              onError={(e) => console.log('Image loading error:', e.nativeEvent.error)}
+            />
+          )}
         </View>
         <View style={styles.exerciseDetailsContainer}>
           <Text style={styles.exerciseText}>{item.name}</Text>
@@ -76,7 +102,23 @@ const ExerciseSearch = () => {
       return(
       <TouchableOpacity style={styles.exerciseSearchItem} onPress={() => pressSearchItem(item)}>
          <View style={styles.searchImageWrapper}>
-          <Image source={{ uri: item.gif }} style={styles.gifImage} />
+          {getVideoSource(item).includes('.mp4') || getVideoSource(item).includes('.mov') ? (
+            <Video
+              source={{ uri: getVideoSource(item) }}
+              style={styles.gifImage}
+              resizeMode="cover"
+              repeat={true}
+              muted={true}
+              paused={false}
+              onError={(e) => console.log('Video loading error:', e)}
+            />
+          ) : (
+            <Image 
+              source={{ uri: getVideoSource(item) }} 
+              style={styles.gifImage}
+              onError={(e) => console.log('Image loading error:', e.nativeEvent.error)}
+            />
+          )}
         </View>
         <Text style={styles.exerciseText}>
           {item.name}
@@ -96,13 +138,14 @@ const ExerciseSearch = () => {
       if (query.length > 2) {
         axios.get(backend_url + `exercises-search/?search=${query}`)
           .then((response) => {
-            console.log(response.data);
-            setExerciseSearchResults(response.data);
-            //setIsModalVisible(true);  // Show the modal when results are available
+            setExerciseSearchResults(response.data.results);
+          })
+          .catch((error) => {
+            console.error('Search error:', error);
+            Alert.alert('Error', 'Failed to search exercises. Please try again.');
           });
       } else {
         setExerciseSearchResults([]); // Clear results if query is too short
-        //setIsModalVisible(false);
       }
     };
   

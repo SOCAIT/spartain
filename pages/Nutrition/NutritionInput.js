@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   View, 
@@ -44,11 +43,12 @@ const NutritionInputScreen = ({ navigation }) => {
     setSearchQuery(query);
     if (query.length > 2) {
       axios.get(`${backend_url}meal-search/?search=${query}`)
-        .then(response => {
-          setSearchResults(response.data);
+        .then((response) => {
+          setSearchResults(response.data.results);
         })
-        .catch(() => {
-          Alert.alert("Error", "Failed to fetch meals");
+        .catch((error) => {
+          console.error('Search error:', error);
+          Alert.alert('Error', 'Failed to search meals. Please try again.');
         });
     } else {
       setSearchResults([]);

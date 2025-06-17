@@ -1,4 +1,4 @@
-import { View, Text , StyleSheet} from 'react-native'
+import { View, Text , StyleSheet, Alert} from 'react-native'
 import React, { useState, useContext, useEffect } from 'react'
 import StylishMenu from '../components/StylishMenu'
 
@@ -15,7 +15,7 @@ const USER= {
 
 const Profile = ({navigation}) => {
 
-  const {authState} = useContext(AuthContext)
+  const {authState, deleteAccount} = useContext(AuthContext)
 
   const [user, setUser] = useState(USER)
 
@@ -28,12 +28,85 @@ const Profile = ({navigation}) => {
      
 
   }, [])
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your data, including:\n\n• Profile information\n• Body measurements\n• Workout history\n• Nutrition data\n• Subscription details",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete Account",
+          style: "destructive",
+          onPress: () => confirmDeleteAccount()
+        }
+      ]
+    );
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      "Final Confirmation",
+      "This is your final warning. Deleting your account will permanently remove all your data and cannot be undone.\n\nType 'DELETE' to confirm:",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "I understand, delete my account",
+          style: "destructive",
+          onPress: () => performDeleteAccount()
+        }
+      ]
+    );
+  };
+
+  const performDeleteAccount = async () => {
+    try {
+      const result = await deleteAccount();
+      if (result.success) {
+        Alert.alert(
+          "Account Deleted",
+          "Your account has been successfully deleted. You will now be logged out.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                // Navigation will be handled automatically by auth state change
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          "Error",
+          result.error || "Failed to delete account. Please try again or contact support.",
+          [{ text: "OK" }]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        "Error",
+        "An unexpected error occurred. Please try again or contact support.",
+        [{ text: "OK" }]
+      );
+    }
+  };
+
   return (
     <View style={styles.container}>
        {/* <ProfileCard user={user} navigation={navigation} onPress={() => navigation.navigate("EditProfile")} onPressReport={() => navigation.navigate("UserReport", {user})} /> */}
 
        <Text style={styles.header}> Settings</Text> 
-       <StylishMenu navigation={navigation} onPress_c={()=> navigation.navigate('Subscripti')}/>
+       <StylishMenu 
+         navigation={navigation} 
+         onPress_c={()=> navigation.navigate('Subscripti')}
+         onPress_delete={handleDeleteAccount}
+       />
     </View>
   )
 }

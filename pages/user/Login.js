@@ -9,7 +9,7 @@ import { Icon } from "@rneui/themed";
 import { useForm, Controller } from 'react-hook-form'
 import { save } from '../../helpers/Storage'
 import SocialAuthentication from '../../components/authentication/SocialAuthentication';
-
+ 
 function Login({ navigation }) {
 
   const { register, setValue, handleSubmit, control, reset, formState: { errors, isValid } } = useForm({ mode: 'onBlur' });

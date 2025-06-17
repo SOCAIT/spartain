@@ -1,0 +1,145 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "0ACFEC91",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6745785526",
+    "_developerTeamID" : "NA4XQYC4BV",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 770903515.97876298,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21684785",
+      "localizations" : [
+
+      ],
+      "name" : "syntrafit_sub_group",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "7.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6746927645",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Full access; billed monthly.",
+              "displayName" : "SyntraFit Pro Monthly",
+              "locale" : "en_GB"
+            }
+          ],
+          "productID" : "syntrafit_sub_monthly_2",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "syntrafit_sub_monthly",
+          "subscriptionGroupID" : "21684785",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "59.99",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6746927906",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Full access; billed annually (save ~33%).",
+              "displayName" : "Syntrafit Pro Yearly",
+              "locale" : "en_GB"
+            }
+          ],
+          "productID" : "syntrafit_sub_yearly_2",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "syntrafit_sub_yearly",
+          "subscriptionGroupID" : "21684785",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

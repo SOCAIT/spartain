@@ -84,9 +84,13 @@ const AddNutritionPlan = ({ navigation }) => {
   const searchMeals = (query) => {
     if (query.length > 2) {
       axios.get(`${backend_url}meal-search/?search=${query}`)
-        .then(response => {
-          setMealSearchResults(response.data);
+        .then((response) => {
+          setMealSearchResults(response.data.results);
           setIsModalVisible(true);
+        })
+        .catch((error) => {
+          console.error('Search error:', error);
+          Alert.alert('Error', 'Failed to search meals. Please try again.');
         });
     } else {
       setMealSearchResults([]);

@@ -2,7 +2,7 @@ import { View, Text } from 'react-native'
 import React from 'react'
 
 import {createNativeStackNavigator}  from "@react-navigation/native-stack"
-import ChatbotScreen from './ChatbotScreen'
+//import ChatbotScreen from './ChatbotScreen'
 import AINutritionPlan from './AINutritionPlan'
 import ChatScreen from './ChatbotScreenNew'
 import AIWorkoutPlanScreen from './AIWorkoutPlan'
@@ -10,6 +10,7 @@ import BodyAnalyzerScreen from './BodyAnalyzer'
 import CameraScreen from './Camera'
 import PhotoPreview from './PhotoPreview'
 import AnalysisResult from './AnalysisResult'
+import ProSubscriptionScreen from '../SubscriptionDetails'
 
 const Stack = createNativeStackNavigator()
 
@@ -26,6 +27,8 @@ const AIStack = () => {
         <Stack.Screen name="CameraScreen" component={CameraScreen} />
         <Stack.Screen name="PhotoPreview" component={PhotoPreview} />
         <Stack.Screen name="AnalysisResult" component={AnalysisResult} />
+        <Stack.Screen name="Subscription" component={ProSubscriptionScreen} />
+
         {/* <Stack.Screen name="NutritionPlan" component={NutritionPlanScreen} /> */}
       </Stack.Navigator> 
     );

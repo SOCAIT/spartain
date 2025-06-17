@@ -10,6 +10,8 @@ import {
   Platform,
   ScrollView,
   Animated,
+  Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -17,29 +19,29 @@ import { COLORS } from '../../constants';
 import { useNavigation } from '@react-navigation/native';
 import { backend_url, agent_url } from '../../config/config';
 import { AuthContext } from '../../helpers/AuthContext';
-
+import { useSubscription } from '../../hooks/useSubscription';
+import SubscriptionModal from '../../components/SubscriptionModal';
 
 export default function ChatScreen() {
-  const [messages, setMessages] = useState([
-    {
-      id: '1',
-      text: "Hi there! Welcome to SyntraFit, your personal AI fitness coach. I'm here to guide you on your fitness journey.\n\nPlease make sure to update your profile information for as accurate suggestions as possible.\n\nWhether you want to get fit, lose weight, or build strength, I'm here to help you through! 💪",
-      isUser: false,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    },
-  ]);
+  
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isPromptModalVisible, setIsPromptModalVisible] = useState(false);
   const [isLargeModalVisible, setIsLargeModalVisible] = useState(false);
   const [inputHeight, setInputHeight] = useState(40);
   const {authState} = useContext(AuthContext);
+  const { checkSubscription, showSubscriptionModal, setShowSubscriptionModal, handleSubscribe } = useSubscription();
   const flatListRef = useRef(null);
   const spinValue = useRef(new Animated.Value(0)).current;
 
-  // const createUserContext = () => {
-  //     let userContext = 
-  // }
+  const [messages, setMessages] = useState([
+    {
+      id: '1',
+      text: "Hi there " + authState.username + "! Welcome to SyntraFit, your personal AI fitness coach. I'm here to guide you on your fitness journey.\n\nPlease make sure to update your profile information for as accurate suggestions as possible.\n\n ⚠️ *Disclaimer:* All health and fitness suggestions provided here are for informational purposes only and not a substitute for professional medical advice. For medical concerns or diagnosis, please consult a licensed healthcare provider.", //\n\nWhether you want to get fit, lose weight, or build strength, I'm here to help you through! 💪",
+      isUser: false,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    },
+  ]);
 
   const navigation = useNavigation();
 
@@ -58,64 +60,71 @@ export default function ChatScreen() {
   };
 
   const sendMessage = async () => {
-    if (inputText.trim().length > 0) {
-      // Add the user message to the list
-      const newMessage = {
+    if (inputText.trim().length === 0) return;
+
+    // Properly await the async subscription check
+    const hasSubscription = await checkSubscription('ai_agent');
+    console.log(hasSubscription);
+    if (!hasSubscription) {
+      return; // Do not proceed if user is not subscribed
+    }
+
+    // Add the user message to the list
+    const newMessage = {
+      id: generateUniqueId(),
+      text: inputText,
+      isUser: true,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+    setMessages((prevMessages) => [...prevMessages, newMessage]);
+    setInputText('');
+    setIsTyping(true);
+
+    // Build conversation context as a single string (for example)
+    // Alternatively, you could format the history in a structured way that your backend expects.
+    const conversationContext = messages
+      .map((msg) => `${msg.isUser ? "User" : "AI"}: ${msg.text}`)
+      .join("\n");
+
+    try {
+      const response = await fetch(agent_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          user_input: newMessage.text,
+          context: conversationContext,
+          auth_state: authState,  // authState should be set from your app's authentication logic
+          // Optionally add user/session id
+        }),
+      });
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+  
+      const botResponse = {
         id: generateUniqueId(),
-        text: inputText,
-        isUser: true,
+        text: data.response || "Sorry, I didn't get that.",
+        isUser: false,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
-      setInputText('');
-      setIsTyping(true);
+      setMessages((prevMessages) => [...prevMessages, botResponse]);
   
-      // Build conversation context as a single string (for example)
-      // Alternatively, you could format the history in a structured way that your backend expects.
-      const conversationContext = messages
-        .map((msg) => `${msg.isUser ? "User" : "AI"}: ${msg.text}`)
-        .join("\n");
-  
-      try {
-        const response = await fetch(agent_url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ 
-            user_input: newMessage.text,
-            context: conversationContext,
-            auth_state: authState,  // authState should be set from your app's authentication logic
-            // Optionally add user/session id
-          }),
-        });
-    
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-    
-        const botResponse = {
-          id: generateUniqueId(),
-          text: data.response || "Sorry, I didn't get that.",
-          isUser: false,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        };
-        setMessages((prevMessages) => [...prevMessages, botResponse]);
-    
-      } catch (error) {
-        console.error('Error fetching AI response:', error);
-        const errorResponse = {
-          id: generateUniqueId(),
-          text: 'Sorry, something went wrong. Please try again later.',
-          isUser: false,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        };
-        setMessages((prevMessages) => [...prevMessages, errorResponse]);
-      } finally {
-        setIsTyping(false);
-      }
+    } catch (error) {
+      console.error('Error fetching AI response:', error);
+      const errorResponse = {
+        id: generateUniqueId(),
+        text: 'Sorry, something went wrong. Please try again later.',
+        isUser: false,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages((prevMessages) => [...prevMessages, errorResponse]);
+    } finally {
+      setIsTyping(false);
     }
   };
 
@@ -124,6 +133,8 @@ export default function ChatScreen() {
     if (flatListRef.current) {
       flatListRef.current.scrollToEnd({ animated: true });
     }
+
+    console.log(authState);
   }, [messages]);
 
   // Add animation effect for the typing indicator
@@ -163,12 +174,56 @@ export default function ChatScreen() {
     setInputHeight(Math.min(Math.max(height, MIN_HEIGHT), MAX_HEIGHT));
   };
 
+  const clearConversation = () => {
+    Alert.alert(
+      "Clear Conversation",
+      "Are you sure you want to clear the entire conversation?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Clear",
+          onPress: () => {
+            setMessages([
+              {
+                id: generateUniqueId(),
+                text: "Hi there! Welcome to SyntraFit, your personal AI fitness coach. I'm here to guide you on your fitness journey.\n\nPlease make sure to update your profile information for as accurate suggestions as possible.\n\nWhether you want to get fit, lose weight, or build strength, I'm here to help you through! 💪",
+                isUser: false,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              }
+            ]);
+          },
+          style: "destructive"
+        }
+      ]
+    );
+  };
+
+  const handleActionTabPress = (action) => {
+    if (checkSubscription(action)) {
+      navigation.navigate(action);
+    }
+  };
+
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>SyntraFit.AI</Text>
         <View style={styles.headerRight}>
+          <TouchableOpacity 
+            onPress={clearConversation}
+            style={styles.clearButton}
+          >
+            <MaterialIcons name="delete-sweep" size={20} color="#FFF" />
+            <Text style={styles.clearButtonText}>Clear</Text>
+          </TouchableOpacity>
           <Text style={styles.chatsLeft}>Advanced Actions</Text>
           <TouchableOpacity onPress={() => setIsPromptModalVisible(true)}>
             <MaterialIcons name="more-vert" size={24} color="#FFF" />
@@ -198,27 +253,27 @@ export default function ChatScreen() {
 
       {/* Action Tabs */}
       <View style={styles.tabsContainer}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <TouchableOpacity
-          style={styles.tab}
-          onPress={() => navigation.navigate('AIWorkoutPlan')}
-        >
-          <Text style={styles.tabText}>Create Workout Plan</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.tab}
-          onPress={() => navigation.navigate('BodyAnalyzer')}
-        >
-          <Text style={styles.tabText}>Analyze Body Composition</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.tab}
-          onPress={() => navigation.navigate('AINutritionPlan')}
-        >
-          <Text style={styles.tabText}>Create Nutrition Plan</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <TouchableOpacity
+            style={styles.tab}
+            onPress={() => handleActionTabPress('AIWorkoutPlan')}
+          >
+            <Text style={styles.tabText}>Create Workout Plan</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tab}
+            onPress={() => handleActionTabPress('BodyAnalyzer')}
+          >
+            <Text style={styles.tabText}>Analyze Body Composition</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tab}
+            onPress={() => handleActionTabPress('AINutritionPlan')}
+          >
+            <Text style={styles.tabText}>Create Nutrition Plan</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
 
       {/* Input Container */}
       <View style={styles.inputContainer}>
@@ -230,7 +285,6 @@ export default function ChatScreen() {
           onChangeText={setInputText}
           multiline
           onContentSizeChange={handleContentSizeChange}
-          // scrollEnabled={inputHeight >= MAX_HEIGHT}
         />
         <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
           <MaterialIcons name="send" size={24} color="#FFF" />
@@ -276,6 +330,24 @@ export default function ChatScreen() {
         onRequestClose={() => setIsLargeModalVisible(false)}
       >
         <View style={styles.largeModalContainer}>
+          <View style={styles.largeModalHeader}>
+            <TouchableOpacity
+              style={styles.largeModalCloseButton}
+              onPress={() => setIsLargeModalVisible(false)}
+            >
+              <MaterialIcons name="close" size={24} color="#FFF" />
+            </TouchableOpacity>
+            <Text style={styles.largeModalTitle}>Write Message</Text>
+            <TouchableOpacity
+              style={styles.largeModalSendButton}
+              onPress={() => {
+                sendMessage();
+                setIsLargeModalVisible(false);
+              }}
+            >
+              <MaterialIcons name="send" size={24} color="#FFF" />
+            </TouchableOpacity>
+          </View>
           <TextInput
             style={styles.largeModalInput}
             placeholder="Type your message here..."
@@ -284,16 +356,23 @@ export default function ChatScreen() {
             onChangeText={setInputText}
             multiline
             textAlignVertical="top"
+            autoFocus
           />
-          <TouchableOpacity
-            style={styles.largeModalCloseButton}
-            onPress={() => setIsLargeModalVisible(false)}
-          >
-            <Text style={styles.largeModalCloseButtonText}>Close</Text>
-          </TouchableOpacity>
+          <View style={styles.largeModalFooter}>
+            <Text style={styles.largeModalHint}>
+              Press send or swipe down to close
+            </Text>
+          </View>
         </View>
       </Modal>
-    </View>
+
+      {/* Add Subscription Modal */}
+      <SubscriptionModal
+        visible={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        navigation={navigation}
+      />
+    </KeyboardAvoidingView>
   );
 }
 
@@ -320,6 +399,20 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  clearButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FF4136',
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderRadius: 15,
+    marginRight: 10,
+  },
+  clearButtonText: {
+    color: '#FFF',
+    fontSize: 12,
+    marginLeft: 3,
   },
   chatsLeft: {
     color: '#FFF',
@@ -407,6 +500,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.dark,
     borderTopWidth: 1,
     borderTopColor: COLORS.dark,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 10,
   },
   input: {
     flex: 1,
@@ -451,26 +545,51 @@ const styles = StyleSheet.create({
   },
   largeModalContainer: {
     flex: 1,
-    backgroundColor: '#222',
-    padding: 20,
-    justifyContent: 'center',
+    backgroundColor: '#1C1C1E',
+  },
+  largeModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: COLORS.dark,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    paddingTop: Platform.OS === 'ios' ? 50 : 12,
+  },
+  largeModalTitle: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  largeModalCloseButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#333',
+  },
+  largeModalSendButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#FF6A00',
   },
   largeModalInput: {
     flex: 1,
     color: '#FFF',
     backgroundColor: '#1C1C1E',
-    borderRadius: 10,
-    padding: 15,
-    textAlignVertical: 'top',
+    padding: 16,
+    fontSize: 16,
+    lineHeight: 24,
   },
-  largeModalCloseButton: {
-    marginTop: 10,
-    backgroundColor: '#FF6A00',
-    borderRadius: 10,
-    padding: 10,
-    alignItems: 'center',
+  largeModalFooter: {
+    padding: 16,
+    backgroundColor: COLORS.dark,
+    borderTopWidth: 1,
+    borderTopColor: '#333',
   },
-  largeModalCloseButtonText: {
-    color: '#FFF',
+  largeModalHint: {
+    color: '#888',
+    fontSize: 12,
+    textAlign: 'center',
   },
 });

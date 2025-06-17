@@ -55,7 +55,7 @@ const RecipeScreen = ({navigation, route}) => {
       <InstructionsModal
      visible={modalVisible}
      onClose={() => setModalVisible(false)}
-     instructions={" Recipe: " + meal.recipe}
+     instructions={" Recipe: " + meal.steps}
    />
     </ScrollView>
    

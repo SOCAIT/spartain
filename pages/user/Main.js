@@ -10,6 +10,10 @@ import { COLORS } from '../../constants'
 // import ProfileCard from '../components/ProfileCard'
 import { AuthContext } from '../../helpers/AuthContext'
 import BodyMeasurements from '../../components/scores/BodyMeasurents';
+import ChartDisplay from '../../components/charts/ChartDisplay';
+import CustomLineChart from '../../components/charts/CustomLineChart';
+import CustomProgressChart from '../../components/charts/CustomProgressChart';
+
 const USER= {
    "username": "Lelouch",
    "height": 0,
@@ -18,36 +22,89 @@ const USER= {
    "age": 0
 }
 
-
-
 export default function MainScreen({navigation}) {
   const {authState} = useContext(AuthContext)
   const [bodyMeasurements, setBodyMeasurements] = useState(null);
   const [currentDate, setCurrentDate] = useState('');
 
-  // const [user, setUser] = useState(USER)
+  const muscleMassData = {
+    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+    datasets: [
+      {
+        data: [0, 75, 80, 85, 85, 90],
+      },
+      {
+        data: [0],
+        withDots: false,
+      },
+    ]
+  };
+
+  const fatLossData = {
+    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+    datasets: [
+      {
+        data: [25, 20, 15, 10, 5, 7],
+      },
+      {
+        data: [0],
+        withDots: false,
+      },
+    ]
+  };
+
+  const muscleGroupData = {
+    labels: ["Chest", "Back", "Delts", "Arms", "Abs", "Legs"],
+    data: [0, 0.75, 0.80, 0.85, 0.85, 0.90] 
+  };
+
+  const charts = [
+    { 
+      id: 1, 
+      title: "Muscle Mass", 
+      component: <CustomLineChart chart_data={muscleMassData} />,
+      backgroundColor: COLORS.dark,
+      onPress: () => navigation.navigate("AnalyticalView", { 
+        type: 'muscle',
+        data: muscleMassData,
+        userWeight: authState.latest_body_measurement?.weight_kg || 0
+      })
+    },
+    { 
+      id: 2, 
+      title: "Fat Loss", 
+      component: <CustomLineChart chart_data={fatLossData} />,
+      backgroundColor: COLORS.dark,
+      onPress: () => navigation.navigate("AnalyticalView", { 
+        type: 'fat',
+        data: fatLossData,
+        userWeight: authState.latest_body_measurement?.weight_kg || 0
+      })
+    },
+    { 
+      id: 3, 
+      title: "Muscle Groups", 
+      component: <CustomProgressChart chart_data={muscleGroupData} />,
+      backgroundColor: COLORS.dark,
+      onPress: () => navigation.navigate("AnalyticalView", { 
+        type: 'groups',
+        data: muscleGroupData,
+        userWeight: authState.latest_body_measurement?.weight_kg || 0
+      })
+    },
+  ];
 
   useEffect(() => {
-    // setUser(prevUser => ({
-    //   ...prevUser,
-    //   username: authState.username,
-    //   id: authState.id,
-    //   age: authState.age,
-    //   height: authState.height,
-      
-    // }));
-    // Set current date
     const date = new Date();
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     setCurrentDate(date.toLocaleDateString('en-US', options));
   }, [])
+
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.dateContainer}>
-          <Text style={styles.dateText}>{currentDate}</Text>
-        </View>
+        <Text style={styles.greetingText}> {authState.username}</Text>
         <View style={styles.notificationContainer}>
           <Icon name="bell" size={24} color="#FFF" />
           <View style={styles.notificationBadge}>
@@ -71,7 +128,6 @@ export default function MainScreen({navigation}) {
           )}
         </View>
         <View style={styles.userDetails}>
-          <Text style={styles.greetingText}> {authState.username}</Text>
           <View style={styles.statusContainer}>
             <View style={styles.detailRow}>
               <MaterialIcons name="fitness-center" size={16} color="#FF6A00" />
@@ -79,7 +135,11 @@ export default function MainScreen({navigation}) {
             </View>
             <View style={styles.detailRow}>
               <MaterialIcons name="flag" size={16} color="#FF6A00" />
-              <Text style={styles.statusText}>Goal: {authState.user_target || 'N/A'}</Text>
+              <Text style={styles.statusText}>Goal: {authState.user_target === 'FL' ? 'Fat Loss' : authState.user_target === 'MG' ? 'Muscle Gain' : authState.user_target === 'WL' ? 'Weight Loss' : authState.user_target === 'ST' ? 'Strength Training' : authState.user_target === 'EN' ? 'Endurance' : 'N/A'}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <MaterialIcons name="person" size={16} color="#FF6A00" />
+              <Text style={styles.statusText}>Gender: {authState.gender === 'M' ? 'Male' : authState.gender === 'F' ? 'Female' : authState.gender === 'O' ? 'Other' : 'N/A'}</Text>
             </View>
             <View style={styles.subscriptionContainer}>
               <View style={styles.subscriptionBadge}>
@@ -91,13 +151,21 @@ export default function MainScreen({navigation}) {
               </TouchableOpacity>
             </View>
           </View>
+          
         </View>
       </TouchableOpacity>
 
-       {/* Body Measurements */}
+      {/* Body Measurements */}
       <SectionHeader title={"User Info"} childComponent={<BodyMeasurements navigation={navigation} />} />
 
-      <SectionHeader title={"Fitness Scores"} childComponent={<FitnessScore />} />
+      {/* Charts */}
+      <SectionHeader title={"Progress Charts"} childComponent={<ChartDisplay navigation={navigation} charts={charts} />} />
+
+      {/* <SectionHeader title={"Fitness Scores"} childComponent={<FitnessScore />} /> */}
+      {/* <View style={styles.carouselContainer}>
+        <CustomCarousel items={charts} renderItem={renderChart} navigation={navigation} />
+      </View> */}
+      {/* <SectionHeader title={"Analytical View"} childComponent={<TouchableOpacity style={styles.analyticalButton} onPress={() => navigation.navigate("AnalyticalView")}><Text style={styles.analyticalText}>View Detailed Analysis</Text></TouchableOpacity>} /> */}
      
 
       {/* Progress */}
@@ -133,9 +201,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 20,
+    padding: 10,
+    backgroundColor: '#2C2C2E',
+
     paddingHorizontal: 15,
   },
-  dateContainer: {},
+  dateContainer: {}, 
   dateText: {
     color: '#FFF',
     fontSize: 16,
@@ -159,7 +230,6 @@ const styles = StyleSheet.create({
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 20,
     marginBottom: 20,
     backgroundColor: '#2C2C2E',
     padding: 12,
@@ -260,5 +330,43 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF6A00',
     borderRadius: 20,
     padding: 10,
+  },
+  metricCard: {
+    backgroundColor: '#2C2C2E',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    width: "100%",
+    alignItems: 'center',
+  },
+  metricLabel: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+    width: '100%',
+  },
+  chartWrapper: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  analyticalText: {
+    color: '#FF6A00',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  carouselContainer: {
+    backgroundColor: '#2C2C2E',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+  },
+  analyticalButton: {
+    backgroundColor: '#FF6A00',
+    borderRadius: 5,
+    padding: 10,
+    alignItems: 'center',
   },
 });

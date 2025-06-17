@@ -24,11 +24,11 @@ const CardOverlay = ({onPress, workout, navigation}) => {
   >
     <View style={styles.workoutOverlay}>
       <Text style={styles.workoutTitle}>{workout.name}</Text>
-      <Text style={styles.workoutInfo}>8 Series Workout - Intense</Text>
-      <View style={styles.workoutMetrics}>
+      {/* <Text style={styles.workoutInfo}>8 Series Workout - Intense</Text> */}
+      {/* <View style={styles.workoutMetrics}>
         <Text style={styles.workoutMetric}>25min</Text>
         <Text style={styles.workoutMetric}>412kcal</Text>
-      </View>
+      </View> */}
       <TouchableOpacity style={styles.playButton} onPress={viewWorkout}>
         <MaterialIcons name="chevron-right" size={24} color="#FFF" />
       </TouchableOpacity>
@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
       height: 150,
       borderRadius: 10,
       overflow: 'hidden',
-      // width: '80%',
+      width: 250,
     },
     cardImage: {
       borderRadius: 10,
@@ -53,6 +53,7 @@ const styles = StyleSheet.create({
       flex: 1,
       justifyContent: 'space-between',
       padding: 15,
+
       backgroundColor: 'rgba(0, 0, 0, 0.4)', // Semi-transparent overlay for better text visibility
     },
     workoutTitle: {

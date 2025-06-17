@@ -2,12 +2,15 @@ import React, { useRef } from 'react';
 import { View, Image, TouchableOpacity, Text, StyleSheet, Platform, Alert, Animated } from 'react-native';
 import ArrowHeaderNew from '../../components/ArrowHeaderNew';
 import { vision_url } from '../../config/config';
+import { useSubscription } from '../../hooks/useSubscription';
+import SubscriptionModal from '../../components/SubscriptionModal';
 
 // Adjust this URL to point to your backend server.
 
 export default function PhotoPreview({ route, navigation }) {
   const { photo } = route.params;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const { checkSubscription, showSubscriptionModal, setShowSubscriptionModal, handleSubscribe } = useSubscription();
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -18,6 +21,12 @@ export default function PhotoPreview({ route, navigation }) {
   }, []);
 
   const handleAnalyze = async () => {
+    // Check subscription status before making API call
+    const hasSubscription = await checkSubscription('progress_tracking');
+    if (!hasSubscription) {
+      return; // Do not proceed if user is not subscribed
+    }
+
     try {
       // Create a FormData object and append the photo file.
       const formData = new FormData();
@@ -145,6 +154,14 @@ export default function PhotoPreview({ route, navigation }) {
         >
           <Text style={styles.buttonText}>📊 Analyze Body</Text>
         </TouchableOpacity>
+        
+        <View style={styles.disclaimerNote}>
+          <Text style={styles.disclaimerText}>
+            ℹ️ Analysis provides AI-generated estimations for fitness tracking purposes only.
+            These estimations should be used for general fitness tracking purposes only and may not reflect your actual body composition.
+          </Text>
+        </View>
+        
         <TouchableOpacity 
           style={[styles.button, styles.backButton]} 
           onPress={() => navigation.goBack()}
@@ -152,6 +169,13 @@ export default function PhotoPreview({ route, navigation }) {
           <Text style={styles.buttonText}>📷 Take Another Photo</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Add Subscription Modal */}
+      <SubscriptionModal
+        visible={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        navigation={navigation}
+      />
     </Animated.View>
   );
 }
@@ -249,5 +273,15 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  disclaimerNote: {
+    backgroundColor: '#2C2C2E',
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  disclaimerText: {
+    color: '#FFF',
+    fontSize: 14,
   },
 });

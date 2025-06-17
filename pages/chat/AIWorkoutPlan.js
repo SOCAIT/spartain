@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Image, Modal, Platform } from 'react-native';
 import ArrowHeaderNew from '../../components/ArrowHeaderNew';
+import InfoIcon from '../../components/InfoIcon';
 
 const dummyWorkoutPlan = {
   title: "Full Body Strength & Cardio Plan",
@@ -73,15 +74,16 @@ export default function AIWorkoutPlanScreen({ navigation }) {
       />
       <View style={styles.exerciseInfo}>
         <Text style={styles.exerciseName}>{exercise.name}</Text>
-        {exercise.sets && (
-          <Text style={styles.exerciseDetails}>
-            {exercise.sets} sets × {exercise.reps} reps
-          </Text>
+        {exercise.sets && exercise.reps && (
+          <View style={styles.exerciseDetailRow}>
+            <Text style={styles.exerciseDetail}>
+              {exercise.sets} sets × {exercise.reps} reps
+            </Text>
+            <InfoIcon type="strengthTraining" size={14} />
+          </View>
         )}
         {exercise.duration && (
-          <Text style={styles.exerciseDetails}>
-            Duration: {exercise.duration}
-          </Text>
+          <Text style={styles.exerciseDetail}>Duration: {exercise.duration}</Text>
         )}
       </View>
     </View>
@@ -292,7 +294,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  exerciseDetails: {
+  exerciseDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  exerciseDetail: {
     color: '#FF6A00',
     fontSize: 14,
     marginTop: 4,
