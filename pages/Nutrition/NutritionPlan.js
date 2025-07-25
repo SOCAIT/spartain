@@ -4,6 +4,7 @@ import Dropdown from '../../components/Dropdown';
 import IconHeader from '../../components/IconHeader';
 import { COLORS } from '../../constants';
 import { AuthContext } from '../../helpers/AuthContext';
+import { getTargetNutrition } from '../../helpers/useTargetNutrition';
 import axios from 'axios';
 import { backend_url } from '../../config/config';
 import IconButton from '../../components/IconButton';
@@ -23,19 +24,19 @@ import debounce from 'lodash.debounce';
 
 const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const getTargetNutrition = (targetNutritionObj) => {
-
-  const targetNutrition = {
-    calories: targetNutritionObj.target_calories || 0 ,
-    carbs: targetNutritionObj.target_carbs || 0,
-    proteins: targetNutritionObj.target_protein || 0,
-    fats: targetNutritionObj.target_fats || 0,
-  };
-  return targetNutrition;
-}
+// Removed local getTargetNutrition function - now using the one from useTargetNutrition helper
 
 const NutritionPlan = ({ navigation, route }) => {
-  const [selectedDay, setSelectedDay] = useState(null);
+  // Initialize selectedDay to today's day
+  const getCurrentDay = () => {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const today = new Date().getDay();
+    // Convert Sunday (0) to 6, and shift other days back by 1 to match our array
+    const dayIndex = today === 0 ? 6 : today - 1;
+    return days[dayIndex];
+  };
+  
+  const [selectedDay, setSelectedDay] = useState(getCurrentDay());
   const { authState } = useContext(AuthContext);
   const [nutritionPlansData, setNutritionPlansData] = useState([]);
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -45,13 +46,14 @@ const NutritionPlan = ({ navigation, route }) => {
   const [targetNutrition, setTargetNutrition] = useState(getTargetNutrition(authState.target_nutrition_data));
 
   const [mealSearchResults, setMealSearchResults] = useState([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const options = [
     {iconType: 'Ionicons', iconName: 'add-circle-outline', label: 'Add plan', onPress: () => navigation.navigate('AddModifyPlan') },
-    // { iconType: 'MaterialCommunityIcons',iconName: 'file-edit-outline', label: 'Update current plan',onPress:() => navigation.navigate('UpdateWorkoutPlan', { workoutPlan: selectedWorkoutPlan })},
+    { iconType: 'MaterialCommunityIcons',iconName: 'file-edit-outline', label: 'Update current plan',onPress:() => navigation.navigate('AddModifyPlan', { nutritionPlan: selectedPlan })},
 
-    { iconType: 'MaterialCommunityIcons',iconName: 'brain', label: 'ask AI for plan', onPress: () => navigation.navigate('AINutritionPlan') },
-    // { iconType: 'Ionicons',iconName: 'information-circle-outline', label: 'Tips', onPress: () => navigation.navigate('TipsScreen') },
+    // TODO: add AI nutrition plan screen later
+    //{ iconType: 'MaterialCommunityIcons',iconName: 'brain', label: 'ask AI for plan', onPress: () => navigation.navigate('AINutritionPlan') },
   ];
 
   // NEW: State for current nutrition (starts at 0 for a new day)
@@ -61,7 +63,7 @@ const NutritionPlan = ({ navigation, route }) => {
     proteins: 0,
     fats: 0,
   });
-
+ 
   // // NEW: Target nutrition values (could be dynamic)
   // const targetNutrition = {
   //   calories: 2558,
@@ -88,6 +90,7 @@ const NutritionPlan = ({ navigation, route }) => {
                 fats
                 proteins
                 recipe
+                steps
                 description
                 calories
               }
@@ -123,12 +126,72 @@ const NutritionPlan = ({ navigation, route }) => {
   ]
 
   const renderMealCard = (meal, navigation) => {
+      //console.log("render meal")
       return (
-         <MealCardOverlay  meal={meal} navigation={navigation}/>
+         <MealCardOverlay  meal={meal} navigation={navigation} onAddMeal={handleAddMeal} />
       )
   }
+
+  // Add meal to daily intake handler
+  const handleAddMeal = async (meal) => {
+    try {
+      const macros = {
+        calories: parseFloat(meal.calories) || 0,
+        carbs: parseFloat(meal.carbs) || 0,
+        proteins: parseFloat(meal.proteins) || 0,
+        fats: parseFloat(meal.fats) || 0,
+      };
+      setCurrentNutrition(prev => ({
+        calories: prev.calories + macros.calories,
+        carbs: prev.carbs + macros.carbs,
+        proteins: prev.proteins + macros.proteins,
+        fats: prev.fats + macros.fats,
+      }));
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      await AsyncStorage.setItem(
+        '@currentNutrition',
+        JSON.stringify({ date: todayStr, nutrition: {
+          calories: currentNutrition.calories + macros.calories,
+          carbs: currentNutrition.carbs + macros.carbs,
+          proteins: currentNutrition.proteins + macros.proteins,
+          fats: currentNutrition.fats + macros.fats,
+        }}),
+      );
+      Alert.alert('Added', 'Meal added to today\'s nutrition diary!');
+    } catch (err) {
+      console.error('Error adding meal', err);
+      Alert.alert('Error', 'Could not add meal.');
+    }
+  };
+
+  // Reset current nutrition to zero
+  const resetCurrentNutrition = () => {
+    Alert.alert(
+      'Reset Nutrition',
+      "Are you sure you want to reset today's nutrition data? This cannot be undone.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Reset', style: 'destructive', onPress: async () => {
+            try {
+              const zero = { calories: 0, carbs: 0, proteins: 0, fats: 0 };
+              setCurrentNutrition(zero);
+              const todayStr = new Date().toISOString().split('T')[0];
+              await AsyncStorage.setItem(
+                '@currentNutrition',
+                JSON.stringify({ date: todayStr, nutrition: zero })
+              );
+              Alert.alert('Reset', "Today's nutrition has been reset.");
+            } catch (err) {
+              console.error('Error resetting nutrition', err);
+              Alert.alert('Error', 'Could not reset nutrition.');
+            }
+        } },
+      ]
+    );
+  };
  
-  const fetchNutritionPlans = async () => {
+  const fetchNutritionPlans = async (dayToSelect = selectedDay) => {
     try {
       const response = await axios.post(`${backend_url}graphql/`, graphqlUserNutritionPlans);
       //console.log(response.data.data.userWeeklyMealPlans)
@@ -142,37 +205,50 @@ const NutritionPlan = ({ navigation, route }) => {
       console.log(nutritionPlansData)
 
       setNutritionPlansData(plans);
-      setIsLoading(false)
+      setIsLoading(false);
+      setIsRefreshing(false);
 
       if (plans.length > 0) {
         setSelectedPlan(plans[0]);
         console.log("rer0")
         // console.log(plans[0].dailymealplanSet)
 
-
-        setSelectedMealPlan(plans[0].dailymealplanSet.find(plan => plan.day === daysOfWeek.indexOf('Mon')));
+        // Use the currently selected day instead of hardcoding Monday
+        const currentDayIndex = daysOfWeek.indexOf(dayToSelect);
+        setSelectedMealPlan(plans[0].dailymealplanSet.find(plan => plan.day === currentDayIndex));
       }
     } catch (error) {
       console.error('Error fetching nutrition plans:', error);
+      setIsLoading(false);
+      setIsRefreshing(false);
       Alert.alert('Error', 'Failed to load nutrition plans.');
     }
   };
  
   useEffect(() => {
-    fetchNutritionPlans();
+    fetchNutritionPlans(selectedDay);
     
   }, []);
 
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchNutritionPlans(selectedDay);
+  };
+
   useEffect(() => {
-    console.log("selected")
-    console.log(selectedPlan)
+    console.log("useEffect triggered - selectedDay:", selectedDay)
+    console.log("selectedPlan:", selectedPlan)
+    console.log("daysOfWeek.indexOf(selectedDay):", daysOfWeek.indexOf(selectedDay))
     if (selectedPlan && nutritionPlansData.length > 0) {
       const currentPlan = nutritionPlansData.find(plan => plan.value === selectedPlan);
       console.log("Current Plan:", currentPlan);
       if (currentPlan) {
-        const mealForDay = currentPlan.dailymealplanSet.find(mealPlanDay => parseInt(mealPlanDay.day, 10) === daysOfWeek.indexOf(selectedDay));
+        const dayIndex = daysOfWeek.indexOf(selectedDay);
+        console.log("Looking for day index:", dayIndex);
+        console.log("Available days in plan:", currentPlan.dailymealplanSet.map(p => p.day));
+        const mealForDay = currentPlan.dailymealplanSet.find(mealPlanDay => parseInt(mealPlanDay.day, 10) === dayIndex);
         setSelectedMealPlan(mealForDay);
-        console.log("Meql for Selected Day:", mealForDay);
+        console.log("Meal for Selected Day:", mealForDay);
       }
     } 
   }, [selectedPlan, selectedDay, nutritionPlansData]);
@@ -182,11 +258,17 @@ const NutritionPlan = ({ navigation, route }) => {
     React.useCallback(() => {
       if (route.params && route.params.updatedNutrition) {
         const update = route.params.updatedNutrition;
+        const add = {
+          calories: parseFloat(update.calories) || 0,
+          carbs: parseFloat(update.carbs) || 0,
+          proteins: parseFloat(update.proteins) || 0,
+          fats: parseFloat(update.fats) || 0,
+        };
         setCurrentNutrition(prev => ({
-          calories: prev.calories + (update.calories || 0),
-          carbs: prev.carbs + (update.carbs || 0),
-          proteins: prev.proteins + (update.proteins || 0),
-          fats: prev.fats + (update.fats || 0),
+          calories: prev.calories + add.calories,
+          carbs: prev.carbs + add.carbs,
+          proteins: prev.proteins + add.proteins,
+          fats: prev.fats + add.fats,
         }));
         navigation.setParams({ updatedNutrition: null });
       }
@@ -330,6 +412,7 @@ const NutritionPlan = ({ navigation, route }) => {
           targetNutrition={targetNutrition} 
           currentNutrition={currentNutrition} 
           navigation={navigation}
+          onReset={resetCurrentNutrition}
         />
 
         <DaySelector selectedDay={selectedDay} onDaySelect={handleDayChange} />
@@ -348,14 +431,23 @@ const NutritionPlan = ({ navigation, route }) => {
             <Text style={{color: "#fff", marginRight:10}}>No Nutrition Plans yet</Text>
           )}     
           <IconButton name='add' onPress={() => setModalVisible(true)} />
+          <IconButton name='refresh' onPress={handleRefresh} disabled={isRefreshing} />
         </View>
 
         <Text style={styles.mealsTitle}>Your Meals</Text>
-        <CustomCarousel 
-          items={selectedMealPlan?.dailymealplandetailSet} 
-          renderItem={renderMealCard} 
-          navigation={navigation}
-        />
+        {selectedMealPlan?.dailymealplandetailSet && selectedMealPlan.dailymealplandetailSet.length > 0 ? (
+          <CustomCarousel 
+            items={selectedMealPlan.dailymealplandetailSet} 
+            renderItem={renderMealCard} 
+            navigation={navigation}
+          />
+        ) : (
+          <View style={{ padding: 20, alignItems: 'center' }}>
+            <Text style={{ color: '#fff', fontSize: 16 }}>
+              No meals planned for {selectedDay}
+            </Text>
+          </View>
+        )}
 
         <OptionModal
           isVisible={modalVisible}

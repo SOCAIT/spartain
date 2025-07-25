@@ -8,7 +8,8 @@ import {
   Platform, 
   FlatList, 
   Image,
-  Alert 
+  Alert,
+  ActivityIndicator 
 } from 'react-native';
 import axios from 'axios';
 import { COLORS } from '../../constants';
@@ -16,8 +17,7 @@ import { backend_url } from '../../config/config';
 import ArrowHeaderNew from '../../components/ArrowHeaderNew';
 import SearchInput from '../../components/inputs/SearchInput';
 
-
-const NutritionInputScreen = ({ navigation }) => {
+const NutritionInputScreen = ({ navigation, route }) => {
   const [mealInput, setMealInput] = useState({
     calories: '',
     carbs: '',
@@ -26,9 +26,50 @@ const NutritionInputScreen = ({ navigation }) => {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  // Handle scanned meal data from route params
+  React.useEffect(() => {
+    if (route.params?.scannedMeal) {
+      const { scannedMeal } = route.params;
+      setMealInput({
+        calories: scannedMeal.calories?.toString() || '',
+        carbs: scannedMeal.carbs?.toString() || '',
+        proteins: scannedMeal.proteins?.toString() || '',
+        fats: scannedMeal.fats?.toString() || '',
+      });
+    }
+  }, [route.params]);
+
+  // Validate input fields
+  const validateInputs = () => {
+    const newErrors = {};
+    
+    if (!mealInput.calories || isNaN(parseFloat(mealInput.calories))) {
+      newErrors.calories = 'Please enter valid calories';
+    }
+    if (!mealInput.carbs || isNaN(parseFloat(mealInput.carbs))) {
+      newErrors.carbs = 'Please enter valid carbs';
+    }
+    if (!mealInput.proteins || isNaN(parseFloat(mealInput.proteins))) {
+      newErrors.proteins = 'Please enter valid proteins';
+    }
+    if (!mealInput.fats || isNaN(parseFloat(mealInput.fats))) {
+      newErrors.fats = 'Please enter valid fats';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   // When the user taps "Add Meal", pass the entered nutrition back to update the main screen
   const addMeal = () => {
+    if (!validateInputs()) {
+      Alert.alert('Validation Error', 'Please fill in all nutrition fields with valid numbers.');
+      return;
+    }
+
     const meal = {
       calories: parseFloat(mealInput.calories) || 0,
       carbs: parseFloat(mealInput.carbs) || 0,
@@ -39,17 +80,20 @@ const NutritionInputScreen = ({ navigation }) => {
   };
 
   // Search for meals when the user types
-  const searchMeals = (query) => {
+  const searchMeals = async (query) => {
     setSearchQuery(query);
     if (query.length > 2) {
-      axios.get(`${backend_url}meal-search/?search=${query}`)
-        .then((response) => {
-          setSearchResults(response.data.results);
-        })
-        .catch((error) => {
-          console.error('Search error:', error);
-          Alert.alert('Error', 'Failed to search meals. Please try again.');
-        });
+      setIsLoading(true);
+      try {
+        const response = await axios.get(`${backend_url}meal-search/?search=${query}`);
+        setSearchResults(response.data.results || []);
+      } catch (error) {
+        console.error('Search error:', error);
+        Alert.alert('Search Error', 'Failed to search meals. Please check your connection and try again.');
+        setSearchResults([]);
+      } finally {
+        setIsLoading(false);
+      }
     } else {
       setSearchResults([]);
     }
@@ -65,20 +109,12 @@ const NutritionInputScreen = ({ navigation }) => {
     });
     setSearchResults([]);
     setSearchQuery('');
+    setErrors({}); // Clear any validation errors
   };
 
-  // Simulate scanning a meal with the camera
+  // Navigate to meal scanning camera
   const handleScanMeal = () => {
-    // In a real app you would open the camera, capture a photo, and send it to your backend.
-    // Here we simulate with dummy data:
-    const scannedData = {
-      calories: '500',
-      carbs: '50',
-      proteins: '30',
-      fats: '20',
-    };
-    setMealInput(scannedData);
-    Alert.alert("Scan Complete", "Meal nutrition info retrieved from scan.");
+    navigation.navigate('MealScanCamera');
   };
 
   // Reset the input fields
@@ -91,99 +127,108 @@ const NutritionInputScreen = ({ navigation }) => {
     });
     setSearchQuery('');
     setSearchResults([]);
+    setErrors({});
   };
 
   const pressSearchItem = (item) => {
-    selectSearchResult(item)
-  }
+    selectSearchResult(item);
+  };
 
   const renderSearchMealItem = ({ item }) => (
-        <TouchableOpacity style={styles.mealSearchItem} onPress={() => pressSearchItem(item)}>
-          <Image source={{ uri: item.image || 'https://via.placeholder.com/150' }} style={styles.mealImage} />
-          <View style={styles.mealInfo}>
-            <Text style={{ color: "#fff" }}>{item.name}</Text>
-            <Text style={{ color: "#fff" }}>Calories: {item.calories} kcal</Text>
-          </View>
-        </TouchableOpacity>
-      );
+    <TouchableOpacity style={styles.mealSearchItem} onPress={() => pressSearchItem(item)}>
+      <Image 
+        source={{ uri: item.image || 'https://via.placeholder.com/60x60/FF6A00/FFFFFF?text=🍽️' }} 
+        style={styles.mealImage} 
+        defaultSource={{ uri: 'https://via.placeholder.com/60x60/FF6A00/FFFFFF?text=🍽️' }}
+      />
+      <View style={styles.mealInfo}>
+        <Text style={styles.mealName} numberOfLines={1}>{item.name}</Text>
+        <View style={styles.nutritionRow}>
+          <Text style={styles.nutritionDetail}>Cal: {item.calories || 0}</Text>
+          <Text style={styles.nutritionDetail}>C: {item.carbs || 0}g</Text>
+          <Text style={styles.nutritionDetail}>P: {item.proteins || 0}g</Text>
+          <Text style={styles.nutritionDetail}>F: {item.fats || 0}g</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderInputField = (label, field, placeholder, icon) => (
+    <View style={styles.inputContainer}>
+      <View style={styles.inputRow}>
+        <View style={styles.inputLabelContainer}>
+          <Text style={styles.inputIcon}>{icon}</Text>
+          <Text style={styles.inputLabel}>{label}</Text>
+        </View>
+        <TextInput
+          style={[styles.input, errors[field] && styles.inputError]}
+          placeholder={placeholder}
+          placeholderTextColor="#888"
+          keyboardType="numeric"
+          value={mealInput[field]}
+          onChangeText={(text) => {
+            setMealInput({ ...mealInput, [field]: text });
+            if (errors[field]) {
+              setErrors({ ...errors, [field]: null });
+            }
+          }}
+        />
+      </View>
+      {errors[field] && <Text style={styles.errorText}>{errors[field]}</Text>}
+    </View>
+  );
 
   return (
     <View style={styles.container}>
       <ArrowHeaderNew navigation={navigation} title={"Add Nutrition Input"} />
+      
       {/* Search Input */}
-      <SearchInput placeholder="Search meals" search={searchMeals} 
-        results={searchResults}
-        onSelect={pressSearchItem} renderSearchResultItem={renderSearchMealItem} />
-      {/* {searchResults.length > 0 && (
-        <FlatList
-          data={searchResults}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={styles.searchResultItem} 
-              onPress={() => selectSearchResult(item)}
-            >
-              <Text style={styles.searchResultText}>
-                {item.name} - {item.calories} kcal
-              </Text>
-            </TouchableOpacity>
-          )}
+      <View style={styles.searchContainer}>
+        <SearchInput 
+          placeholder="Search for meals..." 
+          search={searchMeals} 
+          results={searchResults}
+          onSelect={pressSearchItem} 
+          renderSearchResultItem={renderSearchMealItem}
         />
-      )} */}
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color="#FF6A00" />
+            <Text style={styles.loadingText}>Searching meals...</Text>
+          </View>
+        )}
+      </View>
 
-      {/* Manual Input Fields */}
-      <TextInput
-        style={styles.input}
-        placeholder="Calories"
-        placeholderTextColor="#888"
-        keyboardType="numeric"
-        value={mealInput.calories}
-        onChangeText={(text) => setMealInput({ ...mealInput, calories: text })}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Carbs (g)"
-        placeholderTextColor="#888"
-        keyboardType="numeric"
-        value={mealInput.carbs}
-        onChangeText={(text) => setMealInput({ ...mealInput, carbs: text })}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Proteins (g)"
-        placeholderTextColor="#888"
-        keyboardType="numeric"
-        value={mealInput.proteins}
-        onChangeText={(text) => setMealInput({ ...mealInput, proteins: text })}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Fats (g)"
-        placeholderTextColor="#888"
-        keyboardType="numeric"
-        value={mealInput.fats}
-        onChangeText={(text) => setMealInput({ ...mealInput, fats: text })}
-      />
+      {/* Manual Input Fields with Labels */}
+      <View style={styles.inputsSection}>
+        <Text style={styles.sectionTitle}>Manual Entry</Text>
+        {renderInputField('Calories', 'calories', 'Enter calories (kcal)', '🔥')}
+        {renderInputField('Carbohydrates', 'carbs', 'Enter carbs (g)', '🌾')}
+        {renderInputField('Proteins', 'proteins', 'Enter proteins (g)', '🥩')}
+        {renderInputField('Fats', 'fats', 'Enter fats (g)', '🥑')}
+      </View>
 
       {/* Buttons for scanning and resetting */}
       <View style={styles.buttonRow}>
         <TouchableOpacity style={styles.button} onPress={handleScanMeal}>
+          <Text style={styles.buttonIcon}>📷</Text>
           <Text style={styles.buttonText}>Scan Meal</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.button, styles.resetButton]} onPress={handleReset}>
+          <Text style={styles.buttonIcon}>🔄</Text>
           <Text style={styles.buttonText}>Reset</Text>
         </TouchableOpacity>
       </View>
 
       {/* Add and Cancel Buttons */}
       <TouchableOpacity style={styles.addButton} onPress={addMeal}>
-        <Text style={styles.addButtonText}>Add Meal</Text>
+        <Text style={styles.addButtonText}>✅ Add Meal</Text>
       </TouchableOpacity>
       <TouchableOpacity 
         style={[styles.addButton, styles.cancelButton]} 
         onPress={() => navigation.goBack()}
       >
-        <Text style={styles.addButtonText}>Cancel</Text>
+        <Text style={styles.addButtonText}>❌ Cancel</Text>
       </TouchableOpacity>
     </View>
   );
@@ -196,61 +241,152 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: Platform.OS === 'ios' ? 50 : 20,
   },
-  title: {
-    fontSize: 24,
-    color: '#fff',
+  searchContainer: {
     marginBottom: 20,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+    gap: 10,
+  },
+  loadingText: {
+    color: '#888',
+    fontSize: 14,
+  },
+  inputsSection: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FF6A00',
+    marginBottom: 15,
     textAlign: 'center',
   },
-  searchInput: {
-    backgroundColor: COLORS.lightDark,
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
-    color: '#fff',
+  inputContainer: {
+    marginBottom: 15,
   },
-  searchResultItem: {
-    padding: 10,
-    backgroundColor: COLORS.lightDark,
-    borderRadius: 5,
-    marginBottom: 5,
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
   },
-  searchResultText: {
-    color: '#fff',
+  inputLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 120,
+  },
+  inputIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFF',
   },
   input: {
+    flex: 1,
     backgroundColor: COLORS.lightDark,
     borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
+    padding: 12,
     color: '#fff',
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  inputError: {
+    borderColor: '#FF4444',
+  },
+  errorText: {
+    color: '#FF4444',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  mealSearchItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: COLORS.lightDark,
+    borderRadius: 8,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  mealImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 12,
+    backgroundColor: '#FF6A00',
+  },
+  mealInfo: {
+    flex: 1,
+  },
+  mealName: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  nutritionRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  nutritionDetail: {
+    color: '#AAA',
+    fontSize: 12,
+    fontWeight: '500',
   },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 10,
+    marginVertical: 15,
+    gap: 10,
   },
   button: {
     backgroundColor: '#FF6A00',
-    padding: 10,
+    padding: 12,
     borderRadius: 8,
     flex: 1,
     alignItems: 'center',
-    marginHorizontal: 5,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   resetButton: {
-    backgroundColor: '#888',
+    backgroundColor: '#666',
+  },
+  buttonIcon: {
+    fontSize: 16,
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
   },
   addButton: {
     backgroundColor: '#FF6A00',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
-    marginVertical: 10,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   cancelButton: {
     backgroundColor: '#555',
@@ -258,6 +394,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     fontSize: 18,
     color: '#fff',
+    fontWeight: 'bold',
   },
 });
 

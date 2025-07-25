@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Alert, KeyboardAvoidingView, Platform, ScrollView, Modal,
-   TouchableWithoutFeedback, Keyboard, Pressable } from 'react-native';
+   TouchableWithoutFeedback, Keyboard, Pressable, ActivityIndicator } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome5';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -38,9 +38,9 @@ const activity_level_map = {
 
 const get_key = (value, mapping) => {
   for (const [key, val] of Object.entries(mapping)) {
-    console.log(key, val);
+    //console.log(key, val);
     if (val === value) {
-      console.log(key);
+      //console.log(key);
       return key;
     }
   }
@@ -56,27 +56,101 @@ export default function EditProfileScreen({ route }) {
   // Profile basic info states
   const [age, setAge] = useState(authState.age);
   const [height, setHeight] = useState(authState.height);
-  const [gender, setGender] = useState(get_key(authState.gender, gender_map));
-  const [targetGoal, setTargetGoal] = useState(get_key(authState.user_target, target_goal_map));
-  const [activityLevel, setActivityLevel] = useState(get_key(authState.activity_level, activity_level_map));
-  const [preferences, setPreferences] = useState('');
+  // Store backend codes directly (e.g., 'M', 'MG', 'V')
+  const [gender, setGender] = useState(authState.gender || 'M');
+  const [targetGoal, setTargetGoal] = useState(authState.user_target || 'MG');
+  const [activityLevel, setActivityLevel] = useState(authState.activity_level || 'N');
+  const [preferences, setPreferences] = useState(authState.dietary_preferences);
 
   // Latest Body Measurements states (or empty strings if none exist)
   const [latestWeight, setLatestWeight] = useState(
-    authState.latest_body_measurement ? (authState.latest_body_measurement.weight ? authState.latest_body_measurement.weight : "")  : ""
+    authState.latest_body_measurement ? (authState.latest_body_measurement.weight_kg ? authState.latest_body_measurement.weight_kg : "")  : ""
   );
   const [latestBodyFat, setLatestBodyFat] = useState(
-    authState.latest_body_measurement ? (authState.latest_body_measurement.bodyFat ? authState.latest_body_measurement.bodyFat : "")  : ""
+    authState.latest_body_measurement ? (authState.latest_body_measurement.body_fat_percentage ? authState.latest_body_measurement.body_fat_percentage : "")  : ""
   );
   const [latestMuscleMass, setLatestMuscleMass] = useState(
-    authState.latest_body_measurement ? (authState.latest_body_measurement.muscleMass ? authState.latest_body_measurement.muscleMass : "")  : ""
+    authState.latest_body_measurement ? (authState.latest_body_measurement.muscle_mass_kg ? authState.latest_body_measurement.muscle_mass_kg : "")  : ""
   );
   const [latestCircumference, setLatestCircumference] = useState(
-    authState.latest_body_measurement ? (authState.latest_body_measurement.circumference ? authState.latest_body_measurement.circumference : "")  : ""
+    authState.latest_body_measurement ? (authState.latest_body_measurement.waist_circumference_cm ? authState.latest_body_measurement.waist_circumference_cm  : "")  : ""
   );
 
   // State to handle modal visibility
   const [modalVisible, setModalVisible] = useState(false);
+  const [selectedMetric, setSelectedMetric] = useState('weight');
+  const [metricValue, setMetricValue] = useState('');
+
+  // Define available metrics
+  const bodyMetrics = [
+    { label: 'Weight (kg)', value: 'weight', unit: 'kg' },
+    { label: 'Body Fat (%)', value: 'bodyFat', unit: '%' },
+    { label: 'Muscle Mass (kg)', value: 'muscleMass', unit: 'kg' },
+    { label: 'Circumference (cm)', value: 'circumference', unit: 'cm' },
+  ];
+
+  // Get current value for selected metric
+  const getCurrentMetricValue = (metric) => {
+    switch (metric) {
+      case 'weight':
+        return latestWeight;
+      case 'bodyFat':
+        return latestBodyFat;
+      case 'muscleMass':
+        return latestMuscleMass;
+      case 'circumference':
+        return latestCircumference;
+      default:
+        return '';
+    }
+  };
+
+  // Update the specific metric value
+  const updateMetricValue = (metric, value) => {
+    switch (metric) {
+      case 'weight':
+        setLatestWeight(value);
+        break;
+      case 'bodyFat':
+        setLatestBodyFat(value);
+        break;
+      case 'muscleMass':
+        setLatestMuscleMass(value);
+        break;
+      case 'circumference':
+        setLatestCircumference(value);
+        break;
+    }
+  };
+
+  // Handle metric selection change
+  const handleMetricChange = (metric) => {
+    if (!metric) return; // ignore placeholder events that return null
+    setSelectedMetric(metric);
+    setMetricValue(getCurrentMetricValue(metric));
+  };
+
+  // Handle modal open
+  const openModal = () => {
+    setSelectedMetric('weight');
+    setMetricValue(getCurrentMetricValue('weight'));
+    setModalVisible(true);
+  };
+
+  // Handle save metric
+  const saveMetric = () => {
+    // Persist change in component state
+    updateMetricValue(selectedMetric, metricValue);
+
+    // Close the modal so user sees the change reflected
+    setModalVisible(false);
+
+    // Determine readable label, fall back gracefully
+    const metricObj = bodyMetrics.find(m => m.value === selectedMetric);
+    const readableLabel = metricObj ? metricObj.label : 'Measurement';
+
+    Alert.alert('Success', `${readableLabel} updated successfully!`);
+  };
 
   // Placeholder function for profile picture upload
   const uploadProfilePicture = () => {
@@ -85,34 +159,70 @@ export default function EditProfileScreen({ route }) {
 
   useEffect(() => {
     console.log(authState);
+    console.log(activityLevel);
+    //console.log(authState.activity_level);
+    //console.log(get_key(authState.activity_level, activity_level_map));
   }, []);
 
-  const updateUser = () => {
+  // Loading indicator for save/update action
+  const [saving, setSaving] = useState(false);
+  const [savingMessage, setSavingMessage] = useState("Save");
+
+  const toCode = (val, mapping) => mapping[val] ? mapping[val] : val; // label->code else code
+
+  const updateUser = async () => {
+    setSaving(true);
+    setSavingMessage("Updating...");
+
     let data = {
       age: age,
       height_cm: height,
-      user_target: target_goal_map[targetGoal],
+      user_target: toCode(targetGoal, target_goal_map),
       dietary_preferences: preferences,
+      activity_level: toCode(activityLevel, activity_level_map),
       latest_body_measurement: {
-        weight: latestWeight,
-        bodyFat: latestBodyFat,
-        muscleMass: latestMuscleMass,
-        circumference: latestCircumference,
+        weight_kg: latestWeight,
+        body_fat_percentage: latestBodyFat,
+        muscle_mass_kg: latestMuscleMass,
+        waist_circumference_cm: latestCircumference,
       }
     };
     console.log(data);
-    axios.put(`${backend_url}user/${authState.id}/`, data)
-      .then((response) => {
-        if (response.data.error) {
-          console.log(response.data.error);
-        } else {
-          console.log("user updated");
-          Alert.alert("Updated Successfully");
-        }
-      })
-      .catch((error) => {
-        console.log(error);
-      });
+    try {
+      const response = await axios.put(`${backend_url}user/${authState.id}/`, data);
+      if (response.data.error) {
+        console.log(response.data.error);
+        Alert.alert("Error", response.data.error);
+      } else {
+        console.log('user updated');
+        console.log(response);
+
+        // Update local auth state so UI reflects new values immediately
+        setAuthState(prev => ({
+          ...prev,
+          age: age,
+          height: height,
+          gender: toCode(gender, gender_map),
+          user_target: toCode(targetGoal, target_goal_map),
+          activity_level: toCode(activityLevel, activity_level_map),
+          dietary_preferences: preferences,
+          latest_body_measurement: {
+            weight_kg: latestWeight,
+            body_fat_percentage: latestBodyFat,
+            muscle_mass_kg: latestMuscleMass,
+            waist_circumference_cm: latestCircumference,
+          },
+        }));
+
+        Alert.alert('Success', 'Profile updated successfully');
+      }
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Error", "Failed to update profile. Please try again.");
+    } finally {
+      setSaving(false);
+      setSavingMessage("Save");
+    }
   };
 
   const handleDeleteAccount = () => {
@@ -245,8 +355,9 @@ export default function EditProfileScreen({ route }) {
           <View style={{ flex: 1 }}>
             <Text style={styles.labelText}>Gender</Text>
             <InputDropdown
-              placeholder_value={gender}
-              onValueChange={(text) => setGender(text)}
+              placeholder_value={get_key(gender, gender_map) || 'Select'}
+              selectedValue={gender}
+              onValueChange={(code) => setGender(code)}
               items={[
                 { label: 'Male', value: 'M' },
                 { label: 'Female', value: 'F' },
@@ -258,8 +369,9 @@ export default function EditProfileScreen({ route }) {
           <View style={{ flex: 1, marginLeft: 10 }}>
             <Text style={styles.labelText}>Target Goal</Text>
             <InputDropdown
-              placeholder_value={targetGoal}
-              onValueChange={(text) => setTargetGoal(text)}
+              placeholder_value={get_key(targetGoal, target_goal_map) || 'Select'}
+              selectedValue={targetGoal}
+              onValueChange={(code) => setTargetGoal(code)}
               items={[
                 { label: 'Muscle Gain', value: 'MG' },
                 { label: 'Fat Loss', value: 'FL' },
@@ -273,8 +385,9 @@ export default function EditProfileScreen({ route }) {
         <View style={{ flex: 1, marginLeft: 0, marginTop: Platform.OS === 'ios' ? 15 : 5, width: "50%" }}>
           <Text style={styles.labelText}>Activity Level</Text>
           <InputDropdown
-            placeholder_value={activityLevel}
-            onValueChange={(text) => setActivityLevel(text)}
+            placeholder_value={get_key(activityLevel, activity_level_map) || 'Select'}
+            selectedValue={activityLevel}
+            onValueChange={(code) => setActivityLevel(code)}
             items={[
               { label: 'None', value: 'N' },
               { label: 'Light Active', value: 'L' },
@@ -286,13 +399,13 @@ export default function EditProfileScreen({ route }) {
         </View>
 
         {/* Button to open Body Measurements Modal */}
-        <TouchableOpacity style={styles.openModalButton} onPress={() => setModalVisible(true)}>
+        <TouchableOpacity style={styles.openModalButton} onPress={openModal}>
           <Text style={styles.openModalButtonText}>Edit Body Measurements</Text>
         </TouchableOpacity>
 
         {/* Dietary Preferences */}
         <View style={styles.viewStyle}>
-          <Text style={styles.labelText}>Dietary preferences</Text>
+          <Text style={styles.labelText}>Dietary or Physical preferences</Text>
           <View style={styles.largeInputContainer}>
             <MaterialIcons name="edit" size={20} color="#FF6A00" style={styles.icon} />
             <TextInput
@@ -310,9 +423,22 @@ export default function EditProfileScreen({ route }) {
         
 
         {/* Continue Button */}
-        <TouchableOpacity style={styles.continueButton} onPress={updateUser}>
-          <Text style={styles.continueText}>Save</Text>
-          <MaterialIcons name="arrow-forward" size={20} color="#FFF" style={styles.iconRight} />
+        <TouchableOpacity
+          style={[styles.continueButton, saving && { backgroundColor: COLORS.lightGray5, opacity: 0.7 }]}
+          onPress={updateUser}
+          disabled={saving}
+        >
+          {saving ? (
+            <>
+              <ActivityIndicator color={COLORS.white} style={{ marginRight: 10 }} />
+              <Text style={styles.continueText}>{savingMessage}</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.continueText}>{savingMessage}</Text>
+              <MaterialIcons name="arrow-forward" size={20} color="#FFF" style={styles.iconRight} />
+            </>
+          )}
         </TouchableOpacity>
 
         {/* Delete Account Button */}
@@ -336,53 +462,68 @@ export default function EditProfileScreen({ route }) {
           <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
             <View style={styles.modalOverlay}>
               <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Latest Body Measurements</Text>
+                <Text style={styles.modalTitle}>Update Body Measurement</Text>
+                
+                {/* Metric Selection Dropdown */}
+                <View style={styles.dropdownContainer}>
+                  <Text style={styles.dropdownLabel}>Select Metric:</Text>
+                  <InputDropdown
+                    placeholder_value={bodyMetrics.find(m => m.value === selectedMetric)?.label || 'Select metric'}
+                    onValueChange={handleMetricChange}
+                    items={bodyMetrics.map(metric => ({
+                      label: metric.label,
+                      value: metric.value
+                    }))}
+                  />
+                </View>
+
+                {/* Current Values Display */}
+                <View style={styles.currentValuesContainer}>
+                  <Text style={styles.currentValuesTitle}>Current Measurements:</Text>
+                  {bodyMetrics.map(metric => (
+                    <View key={metric.value} style={styles.currentValueRow}>
+                      <Text style={styles.currentValueLabel}>{metric.label}:</Text>
+                      <Text style={styles.currentValueText}>
+                        {getCurrentMetricValue(metric.value) || 'Not set'}
+                        {getCurrentMetricValue(metric.value) ? ` ${metric.unit}` : ''}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Value Input for Selected Metric */}
+                <View style={styles.inputSection}>
+                  <Text style={styles.inputLabel}>
+                    Update {bodyMetrics.find(m => m.value === selectedMetric)?.label}:
+                  </Text>
                 <View style={styles.modalInputContainer}>
                   <TextInput
                     style={styles.input}
-                    placeholder="Weight (kg)"
+                    placeholder={`Enter ${bodyMetrics.find(m => m.value === selectedMetric)?.label.toLowerCase()}`}
                     placeholderTextColor="#888"
                     keyboardType="numeric"
-                    value={String(latestWeight)}
-                    onChangeText={(text) => setLatestWeight(text)}
+                    value={String(metricValue)}
+                    onChangeText={setMetricValue}
                   />
                 </View>
-                <View style={styles.modalInputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Body Fat (%)"
-                    placeholderTextColor="#888"
-                    keyboardType="numeric"
-                    value={String(latestBodyFat)}
-                    onChangeText={(text) => setLatestBodyFat(text)}
-                  />
                 </View>
-                <View style={styles.modalInputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Muscle Mass"
-                    placeholderTextColor="#888"
-                    keyboardType="numeric"
-                    value={String(latestMuscleMass)}
-                    onChangeText={(text) => setLatestMuscleMass(text)}
-                  />
+
+                {/* Action Buttons */}
+                <View style={styles.modalButtonContainer}>
+                  <TouchableOpacity
+                    style={styles.saveButton}
+                    onPress={saveMetric}
+                  >
+                    <Text style={styles.saveButtonText}>Save Metric</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={styles.closeModalButton}
+                    onPress={() => setModalVisible(false)}
+                  >
+                    <Text style={styles.closeModalButtonText}>Close</Text>
+                  </TouchableOpacity>
                 </View>
-                <View style={styles.modalInputContainer}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Circumference"
-                    placeholderTextColor="#888"
-                    keyboardType="numeric"
-                    value={String(latestCircumference)}
-                    onChangeText={(text) => setLatestCircumference(text)}
-                  />
-                </View>
-                <TouchableOpacity
-                  style={styles.closeModalButton}
-                  onPress={() => setModalVisible(false)}
-                >
-                  <Text style={styles.closeModalButtonText}>Close</Text>
-                </TouchableOpacity>
               </View>
             </View>
           </Pressable>
@@ -509,10 +650,11 @@ const styles = StyleSheet.create({
   closeModalButton: {
     backgroundColor: '#FF6A00',
     borderRadius: 10,
-    paddingVertical: 10,
-    marginTop: 20,
-    alignSelf: 'center',
-    paddingHorizontal: 30,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: '#666',
   },
   closeModalButtonText: {
     color: '#FFF',
@@ -569,5 +711,68 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  dropdownContainer: {
+    marginBottom: 20,
+  },
+  dropdownLabel: {
+    color: COLORS.white,
+    marginBottom: 5,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  currentValuesContainer: {
+    backgroundColor: '#2C2C2E',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 20,
+  },
+  currentValuesTitle: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  currentValueRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5,
+  },
+  currentValueLabel: {
+    color: '#CCC',
+    fontSize: 14,
+  },
+  currentValueText: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  inputSection: { 
+    marginBottom: 20,
+  },
+  inputLabel: {
+    color: COLORS.white,
+    marginBottom: 10,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  saveButton: {
+    backgroundColor: '#FF6A00',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    flex: 1,
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
   },
 });

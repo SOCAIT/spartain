@@ -22,7 +22,9 @@ import SubscriptionModal from '../../components/SubscriptionModal';
 import { useSubscription } from '../../hooks/useSubscription';
 
 const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  
+
+axios.defaults.headers.common['Connection'] = 'close';
+
 const WorkoutPlanScreen = () => {
   const navigation = useNavigation();
   const today = new Date();
@@ -33,6 +35,7 @@ const WorkoutPlanScreen = () => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [selectedWorkoutPlan, setSelectedWorkoutPlan] = useState(null);
   const [selectedWorkout, setSelectedWorkout] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [exerciseSearchResults, setExerciseSearchResults] = useState([]);
   const [selectedExercise, setSelectedExercise] = useState(null);
@@ -40,6 +43,7 @@ const WorkoutPlanScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
 
   const { checkSubscription, showSubscriptionModal, setShowSubscriptionModal, handleSubscribe } = useSubscription();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Add debounced search function
   const debouncedSearch = useCallback(
@@ -120,6 +124,9 @@ const WorkoutPlanScreen = () => {
         workoutSet: obj.workoutSet,
       })) || [];
 
+      // Remove plans without any workouts to avoid undefined errors
+      plans = plans.filter(p => Array.isArray(p.workoutSet) && p.workoutSet.length > 0);
+
       // check the max day
       const maxDay = Math.max(...plans.map(plan => Math.max(...plan.workoutSet.map(workout => parseInt(workout.day, 10)))));
       console.log("Max day:", maxDay);
@@ -154,13 +161,15 @@ const WorkoutPlanScreen = () => {
       console.log("Fetched Plans:", plans);
 
       setWorkoutPlansData(plans);
+      setIsLoading(false);
+      setIsRefreshing(false);
 
       if (plans.length > 0) {
         const initialPlan = plans[0];
         setSelectedPlan(initialPlan.value);
         
         const dayIndexStr = selectedDay.toString();
-        const initialWorkout = initialPlan.workoutSet.find(workout => workout.day === dayIndexStr);
+        const initialWorkout = initialPlan.workoutSet?.find(workout => workout.day === dayIndexStr);
         
         setSelectedWorkout(initialWorkout);
         console.log("Initial Plan Selected:", initialPlan);
@@ -170,6 +179,8 @@ const WorkoutPlanScreen = () => {
     .catch((error) => {
       console.error("Error fetching workout plans:", error);
       console.error("Error details:", error.response?.data || error.message);
+      setIsLoading(false);
+      setIsRefreshing(false);
       Alert.alert("Error", "Failed to load workout plans. Please try again later.");
     });
   };
@@ -227,13 +238,21 @@ const WorkoutPlanScreen = () => {
   }
  
   const navigateToExerciseDetails = (exercise) => {
-    navigation.navigate('ExerciseDetails', { exercise });
+    // check if exercise is not null
+    if (exercise !== undefined) {
+     navigation.navigate('ExerciseDetails', { exercise });
+    }
 }; 
 
 
   useEffect(() => {
     fetchWorkouts();
   }, []);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchWorkouts();
+  };
 
   const handleDayChange = (day) => {
     const dayIndex = typeof day === 'string' ? daysOfWeek.indexOf(day) : day;
@@ -277,9 +296,11 @@ const WorkoutPlanScreen = () => {
       const dayIndexStr = selectedDay.toString();
       const workoutForDay = currentPlan.workoutSet.find(workout => workout.day === dayIndexStr);
       
-      console.log(`Looking for workout for day ${dayIndexStr} after plan change`);
-      console.log("Found workout:", workoutForDay.workoutexerciseSet);
-      console.log("Found workout exercise:", workoutForDay.workoutexerciseSet[0].exercise);
+      if (workoutForDay) {
+        console.log(`Workout for day ${dayIndexStr} after plan change found`);
+      } else {
+        console.log(`No workout found for day ${dayIndexStr} in selected plan`);
+      }
       
       setSelectedWorkout(workoutForDay);
     }
@@ -291,7 +312,23 @@ const WorkoutPlanScreen = () => {
       // <WorkoutCard workout={selectedWorkout} navigation={navigation} />
       <CardOverlay workout={selectedWorkout} navigation={navigation} />
     ) :  (
-      <Text>No workout found for the selected day.</Text>
+      <View style={styles.emptyWorkoutContainer}>
+        <Text style={styles.emptyWorkoutText}>No workout scheduled for {daysOfWeek[selectedDay]}</Text>
+        <Text style={styles.emptyWorkoutSubtext}>
+          {workoutPlansData.length > 0 
+            ? "This day is a rest day or not configured in your plan"
+            : "Create a workout plan to schedule exercises"
+          }
+        </Text>
+        <TouchableOpacity 
+          style={styles.createWorkoutButton}
+          onPress={() => setModalVisible(true)}
+        >
+          <Text style={styles.createWorkoutButtonText}>
+            {workoutPlansData.length > 0 ? "Add Workout" : "Create Plan"}
+          </Text>
+        </TouchableOpacity>
+      </View>
     )}
     </>
 
@@ -299,9 +336,17 @@ const WorkoutPlanScreen = () => {
 
    const options = [
     {iconType: 'Ionicons', iconName: 'add-circle-outline', label: 'Add plan', onPress: () => navigation.navigate('AddModifyPlan') },
-    { iconType: 'MaterialCommunityIcons',iconName: 'file-edit-outline', label: 'Update current plan',onPress:() => navigation.navigate('UpdateWorkoutPlan', { workoutPlan: selectedWorkoutPlan })},
+    { iconType: 'MaterialCommunityIcons',iconName: 'file-edit-outline', label: 'Update current plan',onPress:() => {
+      if (selectedWorkoutPlan && selectedWorkoutPlan.workoutSet) {
+        navigation.navigate('UpdateWorkoutPlan', { workoutPlan: selectedWorkoutPlan });
+      } else {
+        Alert.alert('Error', 'Please select a workout plan first');
+      }
+    }},
 
-    { iconType: 'MaterialCommunityIcons',iconName: 'brain', label: 'ask AI for plan', onPress: () => navigation.navigate('AIWorkoutPlan') },
+    // TODO: add AI workout plan screen later
+    //{ iconType: 'MaterialCommunityIcons',iconName: 'brain', label: 'ask AI for plan', onPress: () => navigation.navigate('AIWorkoutPlan') },
+    
     // { iconType: 'Ionicons',iconName: 'information-circle-outline', label: 'Tips', onPress: () => navigation.navigate('TipsScreen') },
   ];
 
@@ -323,7 +368,7 @@ const WorkoutPlanScreen = () => {
         {/* <ArrowHeaderNew navigation={navigation} title={"Workout Plans"} /> */}
         
         <SearchInput 
-          placeholder="Search workouts" 
+          placeholder="Search exercises, workouts" 
           search={searchExercises} 
           results={exerciseSearchResults}
           onSelect={pressSearchItem} 
@@ -343,13 +388,21 @@ const WorkoutPlanScreen = () => {
         <DaySelector selectedDay={daysOfWeek[selectedDay]} onDaySelect={handleDayChange} />
 
         <SectionHeader title="Your Workout Plans" />
-        <View style={{ flexDirection: "row", marginBottom: 20 }}>
-          {workoutPlansData.length > 0 ? (
+        <View style={{ flexDirection: "row", marginBottom: 20, alignItems: 'center', paddingHorizontal: 20 }}>
+          {isLoading ? (
+            <View style={styles.emptyPlansContainer}>
+              <Text style={styles.emptyPlansText}>Loading workout plans...</Text>
+            </View>
+          ) : workoutPlansData.length > 0 ? (
             <PlanDropdown label={"Change Workout Plan"} data={workoutPlansData} onSelect={handlePlanChange} />
           ) : (
-            <Text>Loading workout plans...</Text>
+            <View style={styles.emptyPlansContainer}>
+              <Text style={styles.emptyPlansText}>No workout plans yet</Text>
+              <Text style={styles.emptyPlansSubtext}>Create your first plan to get started</Text>
+            </View>
           )}
           <IconButton name='add' onPress={() => setModalVisible(true)} />
+          <IconButton name='refresh' onPress={handleRefresh} disabled={isRefreshing} />
         </View>
 
         <SectionHeader title={`Workout for ${daysOfWeek[selectedDay]}`} childComponent={renderWorkout()}/>
@@ -493,6 +546,66 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.select({ ios: 10, android: 8 }),
     paddingHorizontal: Platform.select({ ios: 15, android: 12 }),
     borderRadius: 5,
+  },
+  
+  // Empty state styles
+  emptyPlansContainer: {
+    flex: 1,
+    marginRight: 10,
+  },
+  emptyPlansText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyPlansSubtext: {
+    color: '#888',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  
+  emptyWorkoutContainer: {
+    backgroundColor: COLORS.lightDark,
+    borderRadius: 15,
+    padding: 20,
+    marginHorizontal: 20,
+    marginTop: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 150,
+  },
+  emptyWorkoutText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptyWorkoutSubtext: {
+    color: '#888',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  createWorkoutButton: {
+    backgroundColor: COLORS.darkOrange,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  createWorkoutButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

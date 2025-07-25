@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, ImageBackground, Image, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ImageBackground, Image, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
@@ -11,6 +11,7 @@ import { COLORS, SIZES, FONTS } from "../../constants"
 // import { Icon } from "@rneui/themed";
 import { useForm, Controller } from 'react-hook-form'
 import { save } from '../../helpers/Storage'
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // import SocialAuthentication from '../../components/authentication/SocialAuthentication';
 
 
@@ -24,6 +25,8 @@ export default function SignInScreen({navigation}) {
   const { setAuthState } = useContext(AuthContext)
   const [testApi, setTestApi] = useState(false)
   const [errorMessage, setErrorMessage] = useState("");  // New state for error message
+  const [loading, setLoading] = useState(false);           // Loading indicator state
+  const [statusMessage, setStatusMessage] = useState("Logging in..."); // Dynamic loading message
 
   const test_api = () => {
     axios.get(backend_url + "test/").then((response) => {
@@ -36,46 +39,79 @@ export default function SignInScreen({navigation}) {
     test_api()
   }, []);
 
-  const auth = ({ token }) => {
-    axios.get(backend_url + "auth/auth/", {
-      headers: {
-        'Authorization': 'Bearer ' + token
-      }
-    }).then((response) => {
+  // Returns a promise so the caller can await until user data is fetched
+  const auth = async ({ token }) => {
+    try {
+      const response = await axios.get(backend_url + "auth/auth/", {
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      });
+
       if (response.data.detail) {
-        setAuthState({ username: "", id: 0, status: false })
+        setAuthState({ username: "", id: 0, status: false });
       } else {
-        console.log("authorized" + response.data)
         setAuthState({
-          username: response.data.username, id: response.data.id, status: true,
-          profile_photo: response.data.profile_photo,  age: response.data.age, height: response.data.height_cm,
-          user_target: response.data.user_target, latest_body_measurement: response.data.latest_body_measurement,
-           gender: response.data.gender, target_nutrition_data: response.data.target_nutrition_data,
-        })
+          username: response.data.username,
+          id: response.data.id,
+          status: true,
+          profile_photo: response.data.profile_photo,
+          age: response.data.age,
+          height: response.data.height_cm,
+          dietary_preferences: response.data.dietary_preferences,
+          user_target: response.data.user_target,
+          latest_body_measurement: response.data.latest_body_measurement,
+          gender: response.data.gender,
+          activity_level: response.data.activity_level,
+          target_nutrition_data: response.data.target_nutrition_data,
+        });
       }
-    })
-  }
+    } catch (err) {
+      console.log("Auth error", err);
+      setAuthState({ username: "", id: 0, status: false });
+    }
+  };
 
-  const login = data => {
-    console.log(data)
-    axios.post(backend_url + "user/login/", data).then((response) => {
+  const login = async (data) => {
+    setLoading(true);
+    setErrorMessage("");
+    setStatusMessage("Authenticating...");
+
+    try {
+      console.log(data);
+      const response = await axios.post(backend_url + "user/login/", data);
+
       if (response.data.error) {
-        setErrorMessage(response.data.error);  // Set error message
-      } else {
-        console.log("logged in")
-        console.log(response.data)
-
-        
-        save("accessToken", response.data.access)
-        auth({ token: response.data.access })
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'Tabs' }]
-        })
+        setErrorMessage(response.data.error);
+        return;
       }
-    }).catch((error) => {
-      setErrorMessage("Login failed. Please check your credentials and try again.");  // Handle any other errors
-    });
+
+      setStatusMessage("Loading user info...");
+
+      // Save token and fetch full user details
+      save("accessToken", response.data.access);
+      await auth({ token: response.data.access });
+
+      // Custom extra step for fancy progress feedback
+      setStatusMessage("Calculating nutrition data...");
+
+      // Determine onboarding status
+      const onboardKey = `hasOnboarded_${data.username}`;
+      const alreadyOnboarded = await AsyncStorage.getItem(onboardKey);
+
+      if (alreadyOnboarded) {
+        setStatusMessage("Preparing your dashboard...");
+        navigation.reset({ index: 0, routes: [{ name: 'Tabs' }] });
+      } else {
+        navigation.reset({ index: 0, routes: [{ name: 'Onboarding', params: { username: data.username } }] });
+      }
+    } catch (error) {
+      console.log(error.toJSON ? error.toJSON() : error);
+      setErrorMessage("Login failed. Please check your credentials and try again.");
+    } finally {
+      setLoading(false);
+      setStatusMessage("Logging in...");
+    }
   }
 
   const sign_up = () => {
@@ -140,10 +176,22 @@ export default function SignInScreen({navigation}) {
           </View>
         ) : null}
 
-        <TouchableOpacity style={styles.signInButton} onPress={handleSubmit(login)}>
-          <Text style={styles.signInText}>Sign In</Text>
-          <MaterialIcons name="arrow-forward" size={20} color="#FFF" style={styles.iconRight} />
-        </TouchableOpacity>
+        <View style={{ margin: SIZES.padding * 4 }}>
+          <TouchableOpacity
+            style={[styles.button, loading && { backgroundColor: COLORS.lightGray5, opacity: 0.7 }]}
+            onPress={handleSubmit(login)}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <ActivityIndicator color={COLORS.white} style={{ marginRight: 10 }} />
+                <Text style={{ color: COLORS.white, ...FONTS.h3 }}>{statusMessage}</Text>
+              </>
+            ) : (
+              <Text style={{ color: COLORS.white, ...FONTS.h3 }}> Login </Text>
+            )}
+          </TouchableOpacity>
+        </View>
 
         {/* <View style={styles.socialContainer}>
           <Icon name="instagram" size={30} color="#FFF" style={styles.socialIcon} />
@@ -221,7 +269,7 @@ const styles = StyleSheet.create({
   iconRight: {
     marginLeft: 10,
   },
-  signInButton: {
+  button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

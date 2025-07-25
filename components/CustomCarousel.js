@@ -31,15 +31,16 @@ const CustomCarousel = ({items = [], renderItem, navigation}) => {
         data={items}
         renderItem={renderItemWithWrapper}
         horizontal
-        pagingEnabled
+        pagingEnabled={false}
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item, index) => index.toString()}
         style={styles.metricsScrollContainer}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
-        contentContainerStyle={styles.contentContainer}
         snapToAlignment="center"
-        itemStyle={styles.flatListItem}
+        snapToInterval={260} // Width of card (250) + padding (10)
+        decelerationRate="fast"
+        scrollEventThrottle={16}
       />
       <View style={styles.indicatorContainer}>
         {items.map((_, index) => (
@@ -64,20 +65,13 @@ const styles = StyleSheet.create({
   metricsScrollContainer: {
     flexDirection: 'row',
     width: '100%',
-  },
-  contentContainer: {
-    alignItems: 'center',
-    paddingHorizontal: 0, // Reduced padding
+    flexGrow: 0, // Prevent taking up extra space
   },
   itemWrapper: {
-    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 5, // Small padding between items
-  },
-  flatListItem: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 260, // Fixed width for proper scrolling (250 + 10 padding)
   },
   indicatorContainer: {
     flexDirection: 'row',

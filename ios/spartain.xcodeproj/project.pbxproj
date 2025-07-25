@@ -47,6 +47,7 @@
 		41F3DC566D885E2778F95974 /* Pods-spartain-spartainTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-spartain-spartainTests.release.xcconfig"; path = "Target Support Files/Pods-spartain-spartainTests/Pods-spartain-spartainTests.release.xcconfig"; sourceTree = "<group>"; };
 		482290F1D04669C437F033E6 /* libPods-spartain-spartainTests.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-spartain-spartainTests.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7D5F05C12DD222C9004746A8 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		7D65B8C02E01A0A500978EF8 /* spartain.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = spartain.entitlements; path = spartain/spartain.entitlements; sourceTree = "<group>"; };
 		7D72E8412DEF5B6100554C13 /* Sub.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = Sub.storekit; path = spartain/Sub.storekit; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = spartain/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		87B51EF72DAE4D3200E4C0CA /* Media.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Media.xcassets; sourceTree = "<group>"; };
@@ -105,6 +106,7 @@
 		13B07FAE1A68108700A75B9A /* spartain */ = {
 			isa = PBXGroup;
 			children = (
+				7D65B8C02E01A0A500978EF8 /* spartain.entitlements */,
 				87B51EF22DAE4CB400E4C0CA /* assets */,
 				13B07FAF1A68108700A75B9A /* AppDelegate.h */,
 				13B07FB01A68108700A75B9A /* AppDelegate.mm */,
@@ -498,6 +500,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = spartain/spartain.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = NA4XQYC4BV;
 				ENABLE_BITCODE = NO;
@@ -508,7 +511,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.11;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -532,6 +535,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = spartain/spartain.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = NA4XQYC4BV;
 				INFOPLIST_FILE = spartain/Info.plist;
@@ -541,7 +545,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.7;
+				MARKETING_VERSION = 1.0.11;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",

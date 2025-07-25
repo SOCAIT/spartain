@@ -7,16 +7,9 @@ import { backend_url } from '../../config/config';
 import IconButton from '../../components/IconButton';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { AuthContext } from '../../helpers/AuthContext';
+import { getTargetNutrition } from '../../helpers/useTargetNutrition';
 
-const getTargetNutrition = (targetNutritionObj) => {
-  const targetNutrition = {
-    calories: targetNutritionObj.target_calories || 0,
-    carbs: targetNutritionObj.target_carbs || 0,
-    proteins: targetNutritionObj.target_protein || 0,
-    fats: targetNutritionObj.target_fats || 0,
-  };
-  return targetNutrition;
-};
+// Using getTargetNutrition from useTargetNutrition helper
 
 const AddMealScreen = ({ route, navigation }) => {
   const { day, existingMeal, updateMeal } = route.params;

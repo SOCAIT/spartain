@@ -10,7 +10,7 @@ const MenuRow = ({ iconName, settingName, onPress, isDestructive = false }) => {
       <Icon 
         name={iconName} 
         size={24} 
-        color={isDestructive ? '#FF4444' : COLORS.white} 
+        color={isDestructive ? '#FF4444' : COLORS.darkOrange} 
         style={styles.icon} 
       />
       <Text style={[styles.settingName, isDestructive && styles.destructiveText]}>
@@ -20,7 +20,7 @@ const MenuRow = ({ iconName, settingName, onPress, isDestructive = false }) => {
   );
 };
 
-const StylishMenu = ({navigation, onPress_a, onPress_b, onPress_c, onPress_d, onPress_references, onPress_delete}) => {
+const StylishMenu = ({navigation, onPress_a, onPress_b, onPress_c, onPress_d, onPress_references, onPress_delete, onPress_logout}) => {
   return (
     <View style={styles.container}>
       <ArrowHeaderNew navigation={navigation} />
@@ -34,6 +34,12 @@ const StylishMenu = ({navigation, onPress_a, onPress_b, onPress_c, onPress_d, on
         onPress={onPress_delete}
         isDestructive={true}
       />
+      <MenuRow 
+        iconName="exit-outline" 
+        settingName="Logout" 
+        onPress={onPress_logout}
+        isDestructive={true}
+      />
 
       {/* Add more rows as needed */}
     </View>
@@ -42,27 +48,29 @@ const StylishMenu = ({navigation, onPress_a, onPress_b, onPress_c, onPress_d, on
 
 const styles = StyleSheet.create({
   container: {
-    padding: 5,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     marginTop: 10,
-    width: "90%",
-    borderRadius: SIZES.padding,
-    backgroundColor: COLORS.lightDark 
+    width: '100%',
+    borderRadius: 12,
+    backgroundColor: COLORS.dark,
   },
   rowContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: "90%",
-    marginVertical: 8,
-    borderBottomWidth: 0.4,
-    padding: 5,
-    borderColor: COLORS.white
+    width: '100%',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    marginVertical: 4,
+    backgroundColor: COLORS.lightDark,
+    borderRadius: 8,
   },
   icon: {
-    marginRight: 5,
+    marginRight: 8,
   },
   settingName: {
     fontSize: 16,
-    color: COLORS.white
+    color: COLORS.white,
   },
   destructiveText: {
     color: '#FF4444'

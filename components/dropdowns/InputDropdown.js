@@ -8,7 +8,7 @@ import RNPickerSelect from 'react-native-picker-select';
 import { COLORS } from '../../constants';
 
 
-export const InputDropdown = ({placeholder_value, items, onValueChange}) => {
+export const InputDropdown = ({placeholder_value, items, onValueChange, selectedValue}) => {
 
     const placeholder = {
       label: placeholder_value,
@@ -20,6 +20,7 @@ export const InputDropdown = ({placeholder_value, items, onValueChange}) => {
     return (
      <View style={styles.view}>
       <RNPickerSelect
+        value={selectedValue}
         onValueChange={onValueChange}
         placeholder={placeholder}
         style={styles}

@@ -15,7 +15,7 @@ const USER= {
  
 const Settings = ({navigation}) => {
 
-  const {authState, deleteAccount} = useContext(AuthContext)
+  const {authState, deleteAccount, logout} = useContext(AuthContext)
 
   const [user, setUser] = useState(USER)
 
@@ -126,6 +126,11 @@ const Settings = ({navigation}) => {
     }
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+  };
+
   return (
     <View style={styles.container}>
        {/* <ProfileCard user={user} navigation={navigation} onPress={() => navigation.navigate("EditProfile")} /> */}
@@ -137,6 +142,7 @@ const Settings = ({navigation}) => {
         onPress_b={()=>navigation.navigate('Subscription')}
         onPress_references={()=>navigation.navigate('AboutReferences')}
         onPress_delete={handleDeleteAccount}
+        onPress_logout={handleLogout}
       />
     </View>
   )

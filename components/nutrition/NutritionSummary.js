@@ -4,11 +4,12 @@ import { COLORS } from '../../constants';
 import CircularProgress from '../charts/CircularProgress';
 import InfoIcon from '../InfoIcon';
 
-const NutritionSummary = ({ currentNutrition, targetNutrition, navigation }) => {
+const NutritionSummary = ({ currentNutrition, targetNutrition, navigation, onReset }) => {
   // Calculate percentage (floor percentage, or 0 if no target)
   const getPercentage = (current, target) => {
     if (target > 0) {
-      return Math.floor((current / target) * 100);
+      const pct = Math.floor((Number(current) / Number(target)) * 100);
+      return pct > 100 ? 100 : pct;
     }
     return 0;
   };
@@ -18,12 +19,20 @@ const NutritionSummary = ({ currentNutrition, targetNutrition, navigation }) => 
       <View style={styles.headerRow}>
         <Text style={styles.nutritionSummaryTitle}>Daily Nutrition Info</Text>
         {/* Button to navigate to the screen for adding a meal */}
-        <TouchableOpacity 
-          style={styles.updateNutritionButton} 
-          onPress={() => navigation.navigate('NutritionInput')}
-        >
-          <Text style={styles.updatedNutritionButtonText}>update info</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection:'row', alignItems:'center' }}>
+          <TouchableOpacity
+            style={[styles.updateNutritionButton, { marginRight: 8 }]}
+            onPress={() => navigation.navigate('NutritionInput')}
+          >
+            <Text style={styles.updatedNutritionButtonText}>update info</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.updateNutritionButton, { backgroundColor: '#FF4136' }]}
+            onPress={onReset}
+          >
+            <Text style={styles.updatedNutritionButtonText}>reset</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Main Summary for Calories */}
@@ -57,9 +66,9 @@ const NutritionSummary = ({ currentNutrition, targetNutrition, navigation }) => 
               <Text style={styles.nutritionDetailValue}>
                 {currentNutrition.carbs} / {targetNutrition.carbs}
               </Text>
-              <InfoIcon type="macronutrients" size={12} />
             </View>
             <Text style={styles.nutritionDetailLabel}>Carbs (g)</Text>
+            <InfoIcon type="macronutrients" size={12} />
           </View>
           <CircularProgress
             percentage={getPercentage(
@@ -78,9 +87,9 @@ const NutritionSummary = ({ currentNutrition, targetNutrition, navigation }) => 
               <Text style={styles.nutritionDetailValue}>
                 {currentNutrition.proteins} / {targetNutrition.proteins} 
               </Text>
-              <InfoIcon type="macronutrients" size={12} />
             </View>
-            <Text style={styles.nutritionDetailLabel}>Protein g</Text>
+            <Text style={styles.nutritionDetailLabel}>Protein (g)</Text>
+            <InfoIcon type="macronutrients" size={12} />
           </View>
           <CircularProgress
             percentage={getPercentage(
@@ -99,9 +108,9 @@ const NutritionSummary = ({ currentNutrition, targetNutrition, navigation }) => 
               <Text style={styles.nutritionDetailValue}>
                 {currentNutrition.fats} / {targetNutrition.fats} 
               </Text>
-              <InfoIcon type="macronutrients" size={12} />
-            </View>
+            </View> 
             <Text style={styles.nutritionDetailLabel}>Fats (g)</Text>
+            <InfoIcon type="macronutrients" size={12} />
           </View>
           <CircularProgress
             percentage={getPercentage(

@@ -43,17 +43,19 @@ var backend_url_payments = "https://demo.entangle-app.com/payments/";
 // }
 
 backend_url_exodia= "https://8930-31-216-76-175.ngrok-free.app/api/";
-
-
+ 
+  
 // var backend_url= "http://192.168.1.6:3001/";
 
 var backend_url = "https://socait.com:80/"
 
 backend_url = "https://api.syntrafit.com/api/"
-var agent_url = "https://ersebpxznd.eu-west-3.awsapprunner.com/chat"
-//agent_url = "http://localhost:8000/chat"
+var agent_url = "https://ersebpxznd.eu-west-3.awsapprunner.com" ///chat"
+agent_url = "http://localhost:8080" //chat"
+agent_url = "https://aws-api.syntrafit.com" //chat"
 var vision_url = "https://ni9upzgef8.eu-west-3.awsapprunner.com/"
-
+var data_collection_url = "http://localhost:8080/" 
+ 
 //agent_url = "http://localhost:8080/chat"
 
 // backend_url ="http://34.102.246.190:80/api/"
@@ -61,5 +63,5 @@ var vision_url = "https://ni9upzgef8.eu-west-3.awsapprunner.com/"
 const USDA_API_KEY = "F5Jya9rrfbPA5nBtVQmThPdQRajXLBPITdNZyoOS"
 
 
-module.exports = {backend_url, agent_url, vision_url, USDA_API_KEY};
+module.exports = {backend_url, agent_url, vision_url, USDA_API_KEY, data_collection_url};
       

@@ -1,4 +1,6 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from 'react-native';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions, ScrollView, Platform } from 'react-native';
 import ArrowHeader from '../../components/ArrowHeader';
 import InstructionsModal from '../../components/modals/InstructionModal';
@@ -11,8 +13,48 @@ const RecipeScreen = ({navigation, route}) => {
 
   const { meal } = route.params;
 
+  const addMealToDiary = async () => {
+    try {
+      const macros = {
+        calories: parseFloat(meal.calories) || 0,
+        carbs: parseFloat(meal.carbs) || 0,
+        proteins: parseFloat(meal.proteins) || 0,
+        fats: parseFloat(meal.fats) || 0,
+      };
 
-  
+      const todayStr = new Date().toISOString().split('T')[0];
+      const stored = await AsyncStorage.getItem('@currentNutrition');
+      let base = { calories: 0, carbs: 0, proteins: 0, fats: 0 };
+
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.date === todayStr) {
+          base = parsed.nutrition;
+        }
+      }
+
+      const updated = {
+        calories: base.calories + macros.calories,
+        carbs: base.carbs + macros.carbs,
+        proteins: base.proteins + macros.proteins,
+        fats: base.fats + macros.fats,
+      };
+
+      await AsyncStorage.setItem(
+        '@currentNutrition',
+        JSON.stringify({ date: todayStr, nutrition: updated }),
+      );
+
+      // Navigate back to NutritionPlan with update so it can increment its local state
+      navigation.navigate('NutritionPlan', { updatedNutrition: macros });
+      Alert.alert('Added', 'Meal added to today\'s nutrition diary!');
+    } catch (err) {
+      console.error('Error adding meal to diary', err);
+      Alert.alert('Error', 'Could not add meal to diary.');
+    }
+  };
+
+
   const dummy_item = {
     name: 'Vegetables & Meat',
     // image:  require('../../assets/images/oat.webp') ,
@@ -50,12 +92,20 @@ const RecipeScreen = ({navigation, route}) => {
         <TouchableOpacity style={styles.button} onPress={() => setModalVisible(true)}>
           <Text style={styles.buttonText}>CHECK THE RECIPE</Text>
         </TouchableOpacity>
+
+        {/* Add to diary button */}
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: COLORS.darkOrange, marginTop: 10 }]}
+          onPress={addMealToDiary}
+        >
+          <Text style={styles.buttonText}>ADD TO DAILY INTAKE</Text>
+        </TouchableOpacity>
       </View>
 
       <InstructionsModal
      visible={modalVisible}
      onClose={() => setModalVisible(false)}
-     instructions={" Recipe: " + meal.steps}
+     instructions={" Recipe: " + (meal.steps === "" ? "No steps provided. Ask the SyntraFit Hermes to provide you with the recipe :) |Try this prompt: Give me the instructions to make " + meal.name + " recipe" : meal.steps)}
    />
     </ScrollView>
    

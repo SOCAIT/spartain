@@ -8,15 +8,79 @@ import { backend_url } from '../config/config';
 
 export const AuthContext = createContext();
 
+// Helper function to ensure authState has no null attributes where they shouldn't be
+const sanitizeAuthState = (state) => {
+  // Default target nutrition data with zero values instead of null
+  const defaultTargetNutrition = {
+    target_calories: 0,
+    target_carbs: 0,
+    target_protein: 0,
+    target_fats: 0
+  };
+
+  // Default latest body measurement with zero values instead of null
+  const defaultBodyMeasurement = {
+    weight: 0,
+    weight_kg: 0,
+    bodyFat: 0,
+    muscleMass: 0,
+    circumference: 0
+  };
+
+  // Extract user data (some components access authState.user.property, others access authState.property directly)
+  const userData = state.user || {};
+
+  // Ensure target_nutrition_data is never null, always has default values
+  const sanitizedTargetNutrition = state.target_nutrition_data || defaultTargetNutrition;
+
+  return {
+    ...state,
+    // Ensure user object exists with basic properties
+    user: state.user ? {
+      ...state.user,
+      id: userData.id || 0,
+      username: userData.username || '',
+      age: userData.age || 0,
+      height_cm: userData.height_cm || 0,
+      gender: userData.gender || 'M',
+      user_target: userData.user_target || 'MG',
+      activity_level: userData.activity_level || 'M',
+      profile_photo: userData.profile_photo || '',
+      latest_body_measurement: userData.latest_body_measurement || defaultBodyMeasurement
+    } : null,
+    // Also provide top-level access for backward compatibility (some components expect authState.username directly)
+    id: userData.id || 0,
+    username: userData.username || '',
+    age: userData.age || 0,
+    height: userData.height_cm || 0, // Note: some components use 'height' instead of 'height_cm'
+    height_cm: userData.height_cm || 0,
+    gender: userData.gender || 'M',
+    user_target: userData.user_target || 'MG',
+    activity_level: userData.activity_level || 'M',
+    profile_photo: userData.profile_photo || '',
+    dietary_preferences: userData.dietary_preferences || '',
+    latest_body_measurement: userData.latest_body_measurement || defaultBodyMeasurement,
+    latest_body_measurement: {
+      weight: userData.latest_body_measurement.weight || 0,
+      weight_kg: userData.latest_body_measurement.weight_kg || 0,
+      bodyFat: userData.latest_body_measurement.body_fat_percentage || 0,
+      muscleMass: userData.latest_body_measurement.muscle_mass_kg || 0,
+      circumference: userData.latest_body_measurement.circumference_cm || 0,
+    } ,
+    // Ensure target_nutrition_data is never null, use defaults if null/undefined
+    target_nutrition_data: sanitizedTargetNutrition,
+  };
+};
+
 export const AuthProvider = ({ children }) => {
-  const [authState, setAuthState] = useState({
+  const [authState, setAuthState] = useState(sanitizeAuthState({
     token: null,
     authenticated: false,
     user: null,
     target_nutrition_data: null,
     isSubscribed: false,
     subscriptionExpiry: null,
-  });
+  }));
 
   useEffect(() => {
     loadToken();
@@ -35,25 +99,25 @@ export const AuthProvider = ({ children }) => {
         // const isSubscribed = subscriptionResponse.data.is_subscribed;
         // const subscriptionExpiry = subscriptionResponse.data.expiry_date;
         
-        setAuthState({
+        setAuthState(sanitizeAuthState({
           token,
           authenticated: true,
           user: userResponse.data,
           target_nutrition_data: userResponse.data.target_nutrition_data,
           isSubscribed: await AsyncStorage.getItem('isSubscribed') === 'true',
           subscriptionExpiry: await AsyncStorage.getItem('subscriptionExpiry'),
-        });
+        }));
       }
     } catch (error) {
       console.error('Error loading token:', error);
-      setAuthState({
+      setAuthState(sanitizeAuthState({
         token: null,
         authenticated: false,
         user: null,
         target_nutrition_data: null,
         isSubscribed: false,
         subscriptionExpiry: null,
-      });
+      }));
     }
   };
 
@@ -75,7 +139,7 @@ export const AuthProvider = ({ children }) => {
           // Subscription has expired
           await AsyncStorage.setItem('isSubscribed', 'false');
           await AsyncStorage.removeItem('subscriptionExpiry');
-          setAuthState(prev => ({
+          setAuthState(prev => sanitizeAuthState({
             ...prev,
             isSubscribed: false,
             subscriptionExpiry: null,
@@ -84,7 +148,7 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      setAuthState(prev => ({
+      setAuthState(prev => sanitizeAuthState({
         ...prev,
         isSubscribed,
         subscriptionExpiry,
@@ -114,14 +178,14 @@ export const AuthProvider = ({ children }) => {
       // const isSubscribed = subscriptionResponse.data.is_subscribed;
       // const subscriptionExpiry = subscriptionResponse.data.expiry_date;
 
-      setAuthState({
+      setAuthState(sanitizeAuthState({
         token: access,
         authenticated: true,
         user: userResponse.data,
         target_nutrition_data: userResponse.data.target_nutrition_data,
         isSubscribed: await AsyncStorage.getItem('isSubscribed') === 'true',
         subscriptionExpiry: await AsyncStorage.getItem('subscriptionExpiry'),
-      });
+      }));
 
       return { success: true };
     } catch (error) {
@@ -138,14 +202,14 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.removeItem('token');
       await AsyncStorage.removeItem('refreshToken');
       delete axios.defaults.headers.common['Authorization'];
-      setAuthState({
+      setAuthState(sanitizeAuthState({
         token: null,
         authenticated: false,
         user: null,
         target_nutrition_data: null,
-        isSubscribed: false,
+        //isSubscribed: false,
         subscriptionExpiry: null,
-      });
+      }));
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -165,10 +229,11 @@ export const AuthProvider = ({ children }) => {
         await AsyncStorage.setItem('subscriptionExpiry', expiryDate);
       }
       
-      setAuthState(prev => ({
+      setAuthState(prev => sanitizeAuthState({
         ...prev,
         isSubscribed,
         subscriptionExpiry: expiryDate,
+        user: prev.user ? { ...prev.user, is_subscribed: isSubscribed } : prev.user,
       }));
     } catch (error) {
       console.error('Error updating subscription status:', error);
@@ -189,14 +254,14 @@ export const AuthProvider = ({ children }) => {
         delete axios.defaults.headers.common['Authorization'];
         
         // Reset auth state
-        setAuthState({
+        setAuthState(sanitizeAuthState({
           token: null,
           authenticated: false,
           user: null,
           target_nutrition_data: null,
           isSubscribed: false,
           subscriptionExpiry: null,
-        });
+        }));
         
         return { success: true };
       } else {
@@ -215,6 +280,7 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         authState,
+        setAuthState: (newState) => setAuthState(sanitizeAuthState(newState)),
         login,
         logout,
         updateSubscriptionStatus,

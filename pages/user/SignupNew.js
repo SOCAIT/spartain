@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableWithoutFeedback, Keyboard, Text, TextInput, TouchableOpacity, ImageBackground, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, TouchableWithoutFeedback, Keyboard, Text, TextInput, TouchableOpacity, ImageBackground, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { useState, useEffect, useContext } from "react";
@@ -8,6 +8,7 @@ import { AuthContext } from "../../helpers/AuthContext"
 import { backend_url } from '../../config/config';
 import { useForm, Controller } from 'react-hook-form';
 import { COLORS, SIZES, FONTS } from "../../constants"
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SignUpScreen({ navigation }) {
   const { setAuthState } = useContext(AuthContext);
@@ -46,21 +47,78 @@ export default function SignUpScreen({ navigation }) {
       const response = await axios.post(`${backend_url}user/create/`, {
         username: data.username,
         email: data.email,
-        password: data.password
+        password: data.password,
       });
 
-      if (response.data.error) {
-        Alert.alert('Error', response.data.error);
-      } else {
+      console.log(response);
+
+      // Success criteria: backend returns an integer "id" and HTTP 201/200
+      if (response && Number.isInteger(response.data?.id) && response.status >= 200 && response.status < 300) {
         setAuthState({
           username: response.data.username,
           id: response.data.id,
-          status: true
+          status: true,
         });
-        navigation.navigate("tabs");
+
+        // Ensure onboarding wizard is shown for new account
+        await AsyncStorage.removeItem('hasOnboarded');
+
+        navigation.reset({ index: 0, routes: [{ name: 'Onboarding', params: { username: response.data.username } }] });
+      } else if (Number.isInteger(response.data)) {
+        // If we get an integer ID but not a success status, it means user already exists
+        Alert.alert('Sign Up Failed', 'Username already exists. Please choose a different username.');
+      } else {
+        // Handle various backend error message formats
+        let errorMessage = 'Unable to sign up. Please try again.';
+        
+        console.log(response.data);
+        
+        if (response.data?.error) {
+          errorMessage = response.data.error;
+        } else if (response.data?.detail) {
+          errorMessage = response.data.detail;
+        } else if (response.data?.message) {
+          errorMessage = response.data.message;
+        } else if (response.data?.email) {
+          // Handle field-specific errors (e.g., email already exists)
+          errorMessage = `Email: ${response.data.email[0] || response.data.email}`;
+        } else if (response.data?.username) {
+          errorMessage = `Username: ${response.data.username[0] || response.data.username}`;
+        } else if (typeof response.data === 'string') {
+          errorMessage = response.data;
+        }
+        
+        Alert.alert('Sign Up Failed', errorMessage);
       }
     } catch (error) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to sign up. Please try again.');
+      console.error('Signup error:', error.response?.data || error.message);
+      
+      let errorMessage = 'Failed to sign up. Please try again.';
+      
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        
+        if (errorData.error) {
+          errorMessage = errorData.error;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.email) {
+          // Handle email-specific errors (e.g., "User with this email already exists")
+          errorMessage = Array.isArray(errorData.email) ? errorData.email[0] : errorData.email;
+        } else if (errorData.username) {
+          errorMessage = Array.isArray(errorData.username) ? errorData.username[0] : errorData.username;
+        } else if (errorData.password) {
+          errorMessage = Array.isArray(errorData.password) ? errorData.password[0] : errorData.password;
+        } else if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Sign Up Failed', errorMessage);
     } finally {
       setIsLoading(false);
     }

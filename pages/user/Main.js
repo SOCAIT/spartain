@@ -13,6 +13,10 @@ import BodyMeasurements from '../../components/scores/BodyMeasurents';
 import ChartDisplay from '../../components/charts/ChartDisplay';
 import CustomLineChart from '../../components/charts/CustomLineChart';
 import CustomProgressChart from '../../components/charts/CustomProgressChart';
+// Data collection postponed for now
+// import { useDataCollection, useScreenTracking } from '../../hooks/useDataCollection';
+// import DataCollectionTest from '../../components/DataCollectionTest';
+import { useScreenTracking } from '../../hooks/useDataCollection';
 
 const USER= {
    "username": "Lelouch",
@@ -26,6 +30,10 @@ export default function MainScreen({navigation}) {
   const {authState} = useContext(AuthContext)
   const [bodyMeasurements, setBodyMeasurements] = useState(null);
   const [currentDate, setCurrentDate] = useState('');
+  
+  // Data collection postponed for now
+  // const { collectTodayHealthData } = useDataCollection(); 
+  useScreenTracking('MainScreen');
 
   const muscleMassData = {
     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
@@ -98,6 +106,9 @@ export default function MainScreen({navigation}) {
     const date = new Date();
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
     setCurrentDate(date.toLocaleDateString('en-US', options));
+    
+    // Test data collection on screen load
+    console.log('MainScreen loaded - data collection should be working');
   }, [])
 
   return (
@@ -105,16 +116,23 @@ export default function MainScreen({navigation}) {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.greetingText}> {authState.username}</Text>
-        <View style={styles.notificationContainer}>
+
+        {/* TODO: add notification container */}
+        {/* <View style={styles.notificationContainer}>
           <Icon name="bell" size={24} color="#FFF" />
           <View style={styles.notificationBadge}>
             <Text style={styles.notificationBadgeText}>8</Text>
           </View>
-        </View>
+        </View> */}
       </View>
 
       {/* User Info */}
-      <TouchableOpacity style={styles.userInfo} onPress={() => navigation.navigate("EditProfile",  { authState })}>
+      <TouchableOpacity 
+        style={styles.userInfo} 
+        onPress={() => {
+          navigation.navigate("EditProfile", { authState });
+        }}
+      >
         <View style={styles.profileImageContainer}>
           {authState.profile_photo ? (
             <Image
@@ -156,10 +174,13 @@ export default function MainScreen({navigation}) {
       </TouchableOpacity>
 
       {/* Body Measurements */}
-      <SectionHeader title={"User Info"} childComponent={<BodyMeasurements navigation={navigation} />} />
+      <SectionHeader title={"User Info"} childComponent={<BodyMeasurements navigation={navigation} />} /> {/*  */}
 
       {/* Charts */}
-      <SectionHeader title={"Progress Charts"} childComponent={<ChartDisplay navigation={navigation} charts={charts} />} />
+      {/* <SectionHeader title={"Progress Charts"} childComponent={<ChartDisplay navigation={navigation} charts={charts} />} /> */}
+
+      {/* Data Collection Test - Postponed for now */}
+      {/* <DataCollectionTest /> */}
 
       {/* <SectionHeader title={"Fitness Scores"} childComponent={<FitnessScore />} /> */}
       {/* <View style={styles.carouselContainer}>

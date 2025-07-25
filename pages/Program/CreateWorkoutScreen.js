@@ -65,8 +65,9 @@ const CreateWorkoutScreen = ({ route }) => {
       axios
         .get(`${backend_url}exercises-search/?search=${query}`)
         .then((res) => {
-          Array.isArray(res.data)
-            ? setExerciseSearchResults(res.data)
+          //console.log('res.data', res.data);
+          Array.isArray(res.data.results)
+            ? setExerciseSearchResults(res.data.results)
             : setExerciseSearchResults([]);
         })
         .catch((err) => {
@@ -81,6 +82,7 @@ const CreateWorkoutScreen = ({ route }) => {
   const searchExercises = (query) => {
     setCurrentExercise({ ...currentExercise, name: query });
     debouncedSearch(query);
+    console.log('searchExercises', exerciseSearchResults);
   };
 
   const saveWorkoutAndGoBack = () => {

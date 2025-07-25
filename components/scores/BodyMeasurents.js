@@ -17,7 +17,7 @@ const BodyMeasurements = ({navigation}) => {
   const metrics = [
     // { value: `${height} cm`, label: "Height", backgroundColor: '#6A1B9A', iconName: "straighten", iconType: "Material" },
     { value: `Edit Info`, label: "Update your info (age, target goal, activity level)", backgroundColor: COLORS.lightDark, iconName: "edit", iconType: "Material", onPress: () => navigation.navigate("EditProfile", { authState }) },
-    { value: `Body Analyzer`, label: "scan body, measure your progress", backgroundColor: COLORS.lightDark, iconName: "body", iconType: "Ionicon", onPress: () => navigation.navigate("BodyAnalyzer") },
+    // { value: `Body Analyzer`, label: "scan body, measure your progress", backgroundColor: COLORS.lightDark, iconName: "body", iconType: "Ionicon", onPress: () => navigation.navigate("BodyAnalyzer") },
     // { value: `Body Analyzer`, label: "scan body, measure your progress", backgroundColor: COLORS.lightDark, iconName: "fitness-center", iconType: "Material", onPress: () => navigation.navigate("BodyAnalyzer") },
 
 

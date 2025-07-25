@@ -40,6 +40,9 @@ const BodyAnalyzerScreen = () => {
     setMeasurements({
       ...measurements,
       weight: authState.latest_body_measurement.weight_kg, // kg
+      bodyFat: authState.latest_body_measurement.body_fat_percentage, // %
+      muscleMass: authState.latest_body_measurement.muscle_mass_kg, // kg
+      circumference: authState.latest_body_measurement.circumference_cm, // cm
 
     })
   };
