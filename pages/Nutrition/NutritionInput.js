@@ -17,6 +17,8 @@ import { backend_url } from '../../config/config';
 import ArrowHeaderNew from '../../components/ArrowHeaderNew';
 import SearchInput from '../../components/inputs/SearchInput';
 
+
+
 const NutritionInputScreen = ({ navigation, route }) => {
   const [mealInput, setMealInput] = useState({
     calories: '',
@@ -76,7 +78,11 @@ const NutritionInputScreen = ({ navigation, route }) => {
       proteins: parseFloat(mealInput.proteins) || 0,
       fats: parseFloat(mealInput.fats) || 0,
     };
-    navigation.navigate('NutritionPlan', { updatedNutrition: meal });
+    navigation.navigate({
+      name: 'NutritionPlan',
+      params: { updatedNutrition: meal },
+      merge: true,
+    });
   };
 
   // Search for meals when the user types
@@ -210,10 +216,13 @@ const NutritionInputScreen = ({ navigation, route }) => {
 
       {/* Buttons for scanning and resetting */}
       <View style={styles.buttonRow}>
-        <TouchableOpacity style={styles.button} onPress={handleScanMeal}>
+        {/* <TouchableOpacity style={styles.button} onPress={handleScanMeal}>
           <Text style={styles.buttonIcon}>📷</Text>
           <Text style={styles.buttonText}>Scan Meal</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
+         <TouchableOpacity style={[styles.button,styles.addButton]} onPress={addMeal}>
+        <Text style={styles.addButtonText}>✅ Add Meal</Text>
+      </TouchableOpacity>
         <TouchableOpacity style={[styles.button, styles.resetButton]} onPress={handleReset}>
           <Text style={styles.buttonIcon}>🔄</Text>
           <Text style={styles.buttonText}>Reset</Text>
@@ -221,9 +230,9 @@ const NutritionInputScreen = ({ navigation, route }) => {
       </View>
 
       {/* Add and Cancel Buttons */}
-      <TouchableOpacity style={styles.addButton} onPress={addMeal}>
+      {/* <TouchableOpacity style={styles.addButton} onPress={addMeal}>
         <Text style={styles.addButtonText}>✅ Add Meal</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
       <TouchableOpacity 
         style={[styles.addButton, styles.cancelButton]} 
         onPress={() => navigation.goBack()}
@@ -367,6 +376,15 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     backgroundColor: '#666',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   buttonIcon: {
     fontSize: 16,

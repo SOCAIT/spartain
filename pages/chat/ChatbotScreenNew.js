@@ -15,25 +15,27 @@ import {
   Image,
   Linking,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { COLORS } from '../../constants';
 import { useNavigation } from '@react-navigation/native';
 import { backend_url, agent_url } from '../../config/config';
 import { AuthContext } from '../../helpers/AuthContext';
-import { useSubscription } from '../../hooks/useSubscription';
+// import { useSubscription } from '../../hooks/useSubscription';
+import { useSubscriptionRevenueCat } from '../../hooks/useSubscription.revenuecat';
 import SubscriptionModal from '../../components/SubscriptionModal';
 
  
 export default function ChatScreen() {
-  
+   
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isPromptModalVisible, setIsPromptModalVisible] = useState(false);
   const [isLargeModalVisible, setIsLargeModalVisible] = useState(false);
   const [inputHeight, setInputHeight] = useState(40);
   const {authState} = useContext(AuthContext);
-  const { checkSubscription, showSubscriptionModal, setShowSubscriptionModal, handleSubscribe } = useSubscription();
+  const { checkSubscription, showSubscriptionModal, setShowSubscriptionModal, handleSubscribe } = useSubscriptionRevenueCat();
   const flatListRef = useRef(null);
   const spinValue = useRef(new Animated.Value(0)).current;
   const [thinkingText, setThinkingText] = useState('�� AI is thinking');
@@ -41,7 +43,7 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState([
     {
       id: '1',
-      text: "Helloo there " + authState.username + "! Welcome to SyntraFit Hermes-0, your personal AI fitness coach. I'm here to guide you on your fitness journey.\n\nPlease make sure to update your profile information for as accurate suggestions as possible.\n\n ⚠️ *Disclaimer:* All health and fitness suggestions provided here are for informational purposes only and not a substitute for professional medical advice. For medical concerns or diagnosis, please consult a licensed healthcare provider.", //\n\nWhether you want to get fit, lose weight, or build strength, I'm here to help you through! 💪",
+      text: "Hello there " + authState.username + "! Welcome to SyntraFit Hermes-0, your personal AI fitness coach. I'm here to guide you on your fitness journey.\n\nPlease make sure to update your profile information for as accurate suggestions as possible.\n\n ⚠️ *Disclaimer:* All health and fitness suggestions provided here are for informational purposes only and not a substitute for professional medical advice. For medical concerns or diagnosis, please consult a licensed healthcare provider.", //\n\nWhether you want to get fit, lose weight, or build strength, I'm here to help you through! 💪",
       isUser: false,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
@@ -61,7 +63,7 @@ export default function ChatScreen() {
 
   // ─────────────────────────── helpers
 const JOB_POLL_INTERVAL = 3000;          // 3-second polling
-const MAX_JOB_WAIT_MS   = 10 * 60 * 1000;   // 10 min
+const MAX_JOB_WAIT_MS   = 20 * 60 * 1000;   // 10 min
 const POLL_INTERVAL_MS  =  3 * 1000;        // 3  sec
 
 // New constants for animation timing
@@ -123,13 +125,30 @@ const pollJobStatus = (jobId, botMsgId, setMessages, setIsTyping) => {
       return;
     }
     console.log(`${agent_url}/jobs/${jobId}`);
+    console.log("polling...")
+    
     /* 2 — normal polling */
     try {
       console.log(`${agent_url}/jobs/${jobId}`);
-      const res  = await fetch(`${agent_url}/jobs/${jobId}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      // const res  = await fetch(`${agent_url}/jobs/${jobId}`);
+      // console.log(res)
+      // if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // const data = await res.json();
+      // console.log(data)
 
+      const url = `${agent_url}/jobs/${jobId}`;
+      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+
+      const bodyText = await res.text(); // read text so we can log even on 4xx/5xx
+      console.log('GET', url, 'status', res.status, 'body:', bodyText);
+
+      if (res.status === 404) {
+        // Treat as "not ready yet" instead of error
+        return; // just wait for next tick
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = JSON.parse(bodyText);
       if (data.status === 'complete' || data.status === 'failed') {
         clearInterval(intervalId);
         activePolls.delete(jobId);
@@ -156,6 +175,7 @@ const pollJobStatus = (jobId, botMsgId, setMessages, setIsTyping) => {
       }
     } catch (err) {
       /* network glitch—ignore this tick, try again next */
+      console.log(err.message)
       console.error(`${agent_url}/jobs/${jobId}`);
 
       //console.error('poll error', err);
@@ -258,17 +278,38 @@ useEffect(() => {
       if (msg.status === 'complete') {
         // Chat mode reached end of stream
         setMessages(m =>
-          m.map(item =>
-            item.id === botMsgId
-              ? {
-                  ...item,
-                  timestamp: new Date().toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  }),
-                }
-              : item,
-          ),
+          m.map(item => {
+            if (item.id !== botMsgId) return item;
+
+            // extract nutrition
+            const extract = (txt) => {
+              /* Debug logging to see exactly what the AI sent */
+              console.log('[Nutrition-Parser] Raw AI text ->', txt);
+
+              const match = txt.match(/<nutrition>([\s\S]*?)<\/nutrition>/i);
+              if (!match) {
+                console.log('[Nutrition-Parser] No <nutrition> tag found.');
+                return { clean: txt, data: null };
+              }
+              let data = null;
+              try {
+                data = JSON.parse(match[1]);
+                console.log('[Nutrition-Parser] Parsed nutrition JSON ->', data);
+              } catch (err) {
+                console.log('[Nutrition-Parser] JSON parse error', err);
+              }
+              const clean = txt.replace(match[0], '').trim();
+              return { clean, data };
+            };
+            const { clean, data } = extract(item.text);
+
+            return {
+              ...item,
+              text: clean,
+              nutritionData: data,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            };
+          }),
         );
         setIsTyping(false);
         ws.close();
@@ -398,9 +439,12 @@ useEffect(() => {
   });
 
   const renderItem = ({ item }) => {
-    const displayText = !item.isUser && (!item.text || item.text.trim() === '')
+    const rawText = !item.isUser && (!item.text || item.text.trim() === '')
       ? thinkingText
       : item.text;
+
+    // Remove any leading 'AI:' or 'User:' markers that backend may send
+    const displayText = rawText.replace(/^\s*(AI|User):\s*/i, '');
 
     // Format text with markdown-style formatting for AI responses
     const formatText = (text) => {
@@ -455,9 +499,37 @@ useEffect(() => {
       );
     };
 
+    const addNutrition = async (data) => {
+      if (!data) return;
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const stored = await AsyncStorage.getItem('@currentNutrition');
+        let base = { calories:0, carbs:0, proteins:0, fats:0 };
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.date === today) base = parsed.nutrition;
+        }
+        const updated = {
+          calories: base.calories + (parseFloat(data.calories)||0),
+          carbs: base.carbs + (parseFloat(data.carbs)||0),
+          proteins: base.proteins + (parseFloat(data.protein||data.proteins)||0),
+          fats: base.fats + (parseFloat(data.fat||data.fats)||0),
+        };
+        await AsyncStorage.setItem('@currentNutrition', JSON.stringify({date:today, nutrition:updated}));
+        Alert.alert('Added', 'Nutrition info added to today\'s diary');
+      } catch(err){
+        Alert.alert('Error', 'Could not save nutrition info');
+      }
+    };
+
     return (
-      <View style={[styles.messageContainer, item.isUser ? styles.userMessage : styles.botMessage]}>
+    <View style={[styles.messageContainer, item.isUser ? styles.userMessage : styles.botMessage]}>
         {formatText(displayText)}
+        {item.nutritionData && item.timestamp && (
+          <TouchableOpacity style={styles.nutriButton} onPress={() => addNutrition(item.nutritionData)}>
+            <Text style={styles.nutriButtonText}>Add to Daily Nutrition Info</Text>
+          </TouchableOpacity>
+        )}
         <Text style={styles.timestamp}>{item.timestamp}</Text>
         {item.isUser ? (
           <MaterialIcons name="person" size={20} color="#FF6A00" style={styles.userIcon} />
@@ -488,7 +560,7 @@ useEffect(() => {
             setMessages([
               {
                 id: generateUniqueId(),
-                text: "Hi there! Welcome to SyntraFit, your personal AI fitness coach. I'm here to guide you on your fitness journey.\n\nPlease make sure to update your profile information for as accurate suggestions as possible.\n\nWhether you want to get fit, lose weight, or build strength, I'm here to help you through! 💪",
+                text:  "Hello there " + authState.username + "! Welcome to SyntraFit Hermes-0, your personal AI fitness coach. I'm here to guide you on your fitness journey.\n\nPlease make sure to update your profile information for as accurate suggestions as possible.\n\n ⚠️ *Disclaimer:* All health and fitness suggestions provided here are for informational purposes only and not a substitute for professional medical advice. For medical concerns or diagnosis, please consult a licensed healthcare provider.", //\n\nWhether you want to get fit, lose weight, or build strength, I'm here to help you through! 💪",
                 isUser: false,
                 timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               }
@@ -552,7 +624,7 @@ useEffect(() => {
             <MaterialIcons name="more-vert" size={24} color="#FFF" />
           </TouchableOpacity>
         </View>
-      </View>
+      </View> 
 
       {/* Messages */}
       <FlatList
@@ -932,5 +1004,17 @@ const styles = StyleSheet.create({
   linkText: {
     color: '#4DA6FF',
     textDecorationLine: 'underline',
+  },
+  nutriButton:{
+    marginTop:6,
+    alignSelf:'flex-start',
+    backgroundColor:COLORS.darkOrange,
+    paddingVertical:4,
+    paddingHorizontal:8,
+    borderRadius:6,
+  },
+  nutriButtonText:{
+    color:'#fff',
+    fontSize:12,
   },
 });

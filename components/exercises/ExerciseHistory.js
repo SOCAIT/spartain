@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { COLORS } from '../../constants';
 
 import CustomLineChart from '../charts/CustomLineChart';
@@ -54,41 +54,64 @@ const dropdown_data =[
 const ExerciseHistory = ({ history }) => {
 
   const [selected, setSelected] = useState(dropdown_data[0]);
+  const [period, setPeriod] = useState('weekly'); // default to weekly for recency
 
   
   const [data, setData] = useState(dummy_data);
+  const [noData, setNoData] = useState(false);
 
   const update_data = () => {
+    const mapped_selection = reps_map[(selected.value - 1)]
+    const periodKey = period === 'weekly' ? 'weekly' : 'monthly'
+    const periodData = history?.[periodKey] || {}
+    let periods = Array.isArray(periodData?.periods) ? periodData.periods : []
 
-    mapped_selection = reps_map[(selected.value - 1)]
-    console.log("MONTHS")
-    console.log(mapped_selection)
-    console.log(history)
+    // If weekly, only keep last 5 weeks from now
+    if (periodKey === 'weekly' && periods.length > 0) {
+      const cutoff = new Date()
+      cutoff.setDate(cutoff.getDate() - 35)
+      periods = periods.filter(p => {
+        if (typeof p !== 'string' || p.length !== 10) return false
+        const d = new Date(p)
+        return !isNaN(d.getTime()) && d >= cutoff
+      })
+    }
+    const repsDataMap = periodData?.average_weight?.[mapped_selection] || {}
 
-    // Extract the months and data
-    const months = Object.keys(history[mapped_selection]);
-    const monthAbbreviations = months.map(month => new Date(month).toLocaleString('default', { month: 'short' }));
+    const labels = periods.map(p => {
+      if (p.length === 7) { // YYYY-MM
+        const dateObj = new Date(p + '-01')
+        const shortMonth = dateObj.toLocaleString('default', { month: 'short' })
+        return shortMonth
+      }
+      if (p.length === 10) { // YYYY-MM-DD
+        const d = new Date(p)
+        const m = d.toLocaleDateString('default', { month: 'short' })
+        const day = d.toLocaleDateString('default', { day: '2-digit' })
+        return `${m} ${day}`
+      }
+      return p
+    })
 
-    // Example to create a dataset for one of the rep ranges
-    const repsData = history[mapped_selection];
-    const repsDataValues = Object.values(repsData);
+    const values = periods.map(p => (typeof repsDataMap[p] === 'number' ? repsDataMap[p] : 0))
 
-    // Create the desired chart object
     const chartData = {
-      labels: monthAbbreviations,
+      labels: labels.length > 0 ? labels : dummy_data.labels,
       datasets: [
         {
-          data: repsDataValues
+          data: values.length > 0 ? values : dummy_data.datasets[0].data
         },
         {
-          data: [0], // min
-          withDots: false, //a flage to make it hidden
-
+          data: [0],
+          withDots: false,
         },
       ]
-    };
+    }
 
     setData(chartData)
+
+    const hasData = values.some(v => typeof v === 'number' && v > 0)
+    setNoData(!(hasData))
 
     // console.log(chartData);
 
@@ -109,28 +132,34 @@ const ExerciseHistory = ({ history }) => {
   }
 
   useEffect(() => {
-
       update_data()
-
-  }, [selected])
+  }, [selected, period, history])
 
   return (
     <View style={styles.container}>
-      <View style={{flexDirection: "row"}}>
+      <View style={{width:'100%'}}>
         <Text style={styles.header}>History</Text>
-        <Dropdown data={dropdown_data} onSelect={setSelected} />
-      </View>
-      
-
-      <CustomLineChart chart_data={data}/>
-      {/* {history.map((item, index) => (
-        <View key={index} style={styles.item}>
-          <Text>Date: {item.date}</Text>
-          <Text>Reps: {item.reps}</Text>
-          <Text>Sets: {item.sets}</Text>
-          <Text>Weight: {item.weight}</Text>
+        <View style={styles.dropdownRow}>
+          <Dropdown data={dropdown_data} onSelect={setSelected} />
         </View>
-      ))} */}
+        <View style={styles.segmentedContainer}>
+          <TouchableOpacity accessibilityRole={'tab'} accessibilityState={{ selected: period==='monthly' }} onPress={() => setPeriod('monthly')} style={[styles.segment, period==='monthly' && styles.segmentActive]}>
+            <Text style={[styles.segmentText, period==='monthly' && styles.segmentTextActive]}>Monthly</Text>
+          </TouchableOpacity>
+          <TouchableOpacity accessibilityRole={'tab'} accessibilityState={{ selected: period==='weekly' }} onPress={() => setPeriod('weekly')} style={[styles.segment, period==='weekly' && styles.segmentActive]}>
+            <Text style={[styles.segmentText, period==='weekly' && styles.segmentTextActive]}>Weekly</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.chartContainer}>
+        <CustomLineChart chart_data={data}/>
+        {noData && (
+          <View style={styles.emptyOverlay} pointerEvents={'none'}>
+            <Text style={styles.emptyText}>No data in this period</Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 };
@@ -139,13 +168,59 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 20,
     alignItems: 'center',
-    // width: "90%"
+    width: "95%"
   },
   header: {
     fontSize: 20,
     fontWeight: 'bold',
     paddingTop:15,
     color: COLORS.white
+  },
+  dropdownRow:{
+    width:'100%',
+    marginTop: 6,
+    marginBottom: 6
+  },
+  segmentedContainer:{
+    flexDirection:'row',
+    backgroundColor: COLORS.lightDark,
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 12,
+    marginLeft: 0,
+    width:'100%'
+  },
+  segment:{
+    flex: 1,
+    alignItems:'center',
+    justifyContent:'center',
+    paddingVertical: 10,
+    borderRadius: 8
+  },
+  segmentActive:{
+    backgroundColor: COLORS.darkOrange
+  },
+  segmentText:{
+    color: COLORS.white,
+    fontWeight: '600'
+  },
+  segmentTextActive:{
+    color: COLORS.white
+  },
+  chartContainer:{
+    width:'100%',
+    alignItems:'center',
+    justifyContent:'center'
+  },
+  emptyOverlay:{
+    position:'absolute',
+    bottom: 30,
+    left: 0,
+    right: 0,
+    alignItems:'center'
+  },
+  emptyText:{
+    color: COLORS.lightGray5
   },
   item: {
     backgroundColor: '#fff',

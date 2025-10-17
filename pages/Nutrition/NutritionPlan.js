@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext, useCallback } from 'react';
+import React, { useEffect, useState, useContext, useCallback, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView,  Image, Alert, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import Dropdown from '../../components/Dropdown';
 import IconHeader from '../../components/IconHeader';
@@ -254,6 +254,7 @@ const NutritionPlan = ({ navigation, route }) => {
   }, [selectedPlan, selectedDay, nutritionPlansData]);
 
   // NEW: Update currentNutrition when returning from MealInputScreen
+  const appliedUpdateRef = useRef(false);
   useFocusEffect(
     React.useCallback(() => {
       if (route.params && route.params.updatedNutrition) {
@@ -270,6 +271,9 @@ const NutritionPlan = ({ navigation, route }) => {
           proteins: prev.proteins + add.proteins,
           fats: prev.fats + add.fats,
         }));
+        // Mark that we applied an update so the other focus effect
+        // will skip reloading storage once this cycle.
+        appliedUpdateRef.current = true;
         navigation.setParams({ updatedNutrition: null });
       }
     }, [route.params])
@@ -281,9 +285,8 @@ const NutritionPlan = ({ navigation, route }) => {
     return new Date().toISOString().split('T')[0];
   };
 
-  // Load stored nutrition data, and reset if a new day has started
-  useEffect(() => {
-    const loadNutritionData = async () => {
+  // Helper to load nutrition from storage and reset if new day
+  const loadNutritionData = async () => {
       try {
         const storedData = await AsyncStorage.getItem('@currentNutrition');
         const todayStr = getTodayString();
@@ -310,8 +313,28 @@ const NutritionPlan = ({ navigation, route }) => {
       }
     };
 
+  // initial load
+  useEffect(() => {
     loadNutritionData();
   }, []);
+
+  // reload when screen gains focus (e.g., after Chatbot adds nutrition)
+  useFocusEffect(
+    useCallback(() => {
+      // If we're returning with an update payload, let the other focus handler
+      // apply it first to state and storage, and skip reloading to avoid
+      // overwriting the in-memory addition with stale storage.
+      if (route.params?.updatedNutrition) {
+        return;
+      }
+      // If we just applied an update this focus cycle, skip one reload
+      if (appliedUpdateRef.current) {
+        appliedUpdateRef.current = false;
+        return;
+      }
+      loadNutritionData();
+    }, [route.params?.updatedNutrition]),
+  );
 
   // Save nutrition data whenever currentNutrition state changes
   useEffect(() => {
@@ -357,6 +380,11 @@ const NutritionPlan = ({ navigation, route }) => {
       console.log("rer" + mealPlanForDay)
       console.log("Nutrition for Selected Day after Plan Change:", mealPlanForDay);
     }
+  };
+
+  const handleDeletePlan = (deletedPlanId) => {
+    // Refresh the plans after deletion
+    fetchNutritionPlans(selectedDay);
   };
 
   // Add debounced search function
@@ -425,7 +453,8 @@ const NutritionPlan = ({ navigation, route }) => {
             <NutritionPlanDropdown 
               label={"Change Nutrition Plan"} 
               data={nutritionPlansData} 
-              onSelect={handlePlanChange} 
+              onSelect={handlePlanChange}
+              onDelete={handleDeletePlan}
             />
           ) : (
             <Text style={{color: "#fff", marginRight:10}}>No Nutrition Plans yet</Text>

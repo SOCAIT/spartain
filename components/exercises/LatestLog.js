@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { COLORS } from '../../constants';
 
 import CustomLineChart from '../charts/CustomLineChart';
@@ -49,6 +49,7 @@ const latestLogs = {
 const LatestLog = ({exercise, data}) => {
 
     const [selected, setSelected] = useState(dropdown_data[0]);
+    const [metric, setMetric] = useState('latest'); // 'latest' | 'max'
 
   
     //const [data, setData] = useState(dummy_data);
@@ -95,13 +96,8 @@ const LatestLog = ({exercise, data}) => {
     }
   
     useEffect(() => {
-
-        console.log(data)
-  
-        // update_data()
         setLogData(data)
-  
-    }, [selected])
+    }, [data])
   
   return (
      <View style={styles.container}>
@@ -117,12 +113,31 @@ const LatestLog = ({exercise, data}) => {
          </View>
        ))} */}
 
-        <View  style={styles.logRow}>
+        {/* <View style={styles.segmentedContainer}>
+            <TouchableOpacity accessibilityRole={'tab'} accessibilityState={{ selected: metric==='latest' }} onPress={() => setMetric('latest')} style={[styles.segment, metric==='latest' && styles.segmentActive]}>
+                <Text style={[styles.segmentText, metric==='latest' && styles.segmentTextActive]}>Latest</Text>
+             </TouchableOpacity>
+            <TouchableOpacity accessibilityRole={'tab'} accessibilityState={{ selected: metric==='max' }} onPress={() => setMetric('max')} style={[styles.segment, metric==='max' && styles.segmentActive]}>
+                <Text style={[styles.segmentText, metric==='max' && styles.segmentTextActive]}>Max</Text>
+            </TouchableOpacity>
+         </View> */}
+
+         <View  style={styles.logRow}>
           <Dropdown data={dropdown_data} onSelect={setSelected} />
-          <View style={styles.logWeightCard}>
-            <Text style={styles.logWeight}>{ logData[reps_map[selected.value-1]]} kg</Text>
-          </View>
+
+           <View style={styles.logWeightCard}>
+            <Text style={styles.metricLabel}>{metric === 'latest' ? 'Latest lifted' : 'Max lifted'}</Text>
+            <Text style={styles.logWeight}>
+              {(() => {
+                const repKey = reps_map[selected.value-1]
+                const value = typeof logData?.[metric]?.[repKey] === 'number' ? logData[metric][repKey] : 0
+                return value > 0 ? `${value} kg` : 'No logs yet'
+              })()}
+            </Text>
          </View>
+          </View>
+        
+         
      </View>
      </View>
   )
@@ -147,6 +162,32 @@ const styles = StyleSheet.create({
       padding: 15,
       borderRadius: 10,
     },
+    segmentedContainer:{
+      flexDirection:'row',
+      backgroundColor: COLORS.lightDark,
+      borderRadius: 12,
+      padding: 4,
+      marginBottom: 12,
+      marginTop: 4,
+      width: '100%'
+    },
+    segment:{
+      flex: 1,
+      alignItems:'center',
+      justifyContent:'center',
+      paddingVertical: 10,
+      borderRadius: 8
+    },
+    segmentActive:{
+      backgroundColor: COLORS.darkOrange
+    },
+    segmentText:{
+      color: COLORS.white,
+      fontWeight: '600'
+    },
+    segmentTextActive:{
+      color: COLORS.white
+    },
     logRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -163,8 +204,11 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       padding: 10
     },
+    metricLabel:{
+      color: COLORS.white,
+      marginBottom: 4
+    },
     logWeight: {
-      color: '#4caf50',
       color: COLORS.darkOrange,
       fontSize: 16,
       fontWeight: 'bold',

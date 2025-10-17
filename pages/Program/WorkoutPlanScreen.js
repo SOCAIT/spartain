@@ -306,6 +306,11 @@ const WorkoutPlanScreen = () => {
     }
   };
 
+  const handleDeletePlan = (deletedPlanId) => {
+    // Refresh the plans after deletion
+    fetchWorkouts();
+  };
+
    const renderWorkout = () => {
     return <>
     {selectedWorkout ?  (
@@ -394,7 +399,7 @@ const WorkoutPlanScreen = () => {
               <Text style={styles.emptyPlansText}>Loading workout plans...</Text>
             </View>
           ) : workoutPlansData.length > 0 ? (
-            <PlanDropdown label={"Change Workout Plan"} data={workoutPlansData} onSelect={handlePlanChange} />
+            <PlanDropdown label={"Change Workout Plan"} data={workoutPlansData} onSelect={handlePlanChange} onDelete={handleDeletePlan} />
           ) : (
             <View style={styles.emptyPlansContainer}>
               <Text style={styles.emptyPlansText}>No workout plans yet</Text>

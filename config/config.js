@@ -53,6 +53,8 @@ backend_url = "https://api.syntrafit.com/api/"
 var agent_url = "https://ersebpxznd.eu-west-3.awsapprunner.com" ///chat"
 agent_url = "http://localhost:8080" //chat"
 agent_url = "https://aws-api.syntrafit.com" //chat"
+agent_url = "https://fitness-agent-807169666347.europe-west1.run.app" //chat"
+agent_url = "https://fitness-agent-807169666347.europe-west1.run.app" //chat"
 var vision_url = "https://ni9upzgef8.eu-west-3.awsapprunner.com/"
 var data_collection_url = "http://localhost:8080/" 
  
@@ -62,6 +64,8 @@ var data_collection_url = "http://localhost:8080/"
 
 const USDA_API_KEY = "F5Jya9rrfbPA5nBtVQmThPdQRajXLBPITdNZyoOS"
 
+var fitxpress_url = "https://backend.fitxpress.3dlook.me/api/1.0/"
+var fitxpress_token = "79e9da16294ec90c45df4112884c0800885eb850"
 
-module.exports = {backend_url, agent_url, vision_url, USDA_API_KEY, data_collection_url};
+module.exports = {backend_url, agent_url, vision_url, USDA_API_KEY, data_collection_url, fitxpress_url, fitxpress_token};
       

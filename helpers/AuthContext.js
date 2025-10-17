@@ -61,11 +61,11 @@ const sanitizeAuthState = (state) => {
     dietary_preferences: userData.dietary_preferences || '',
     latest_body_measurement: userData.latest_body_measurement || defaultBodyMeasurement,
     latest_body_measurement: {
-      weight: userData.latest_body_measurement.weight || 0,
-      weight_kg: userData.latest_body_measurement.weight_kg || 0,
-      bodyFat: userData.latest_body_measurement.body_fat_percentage || 0,
-      muscleMass: userData.latest_body_measurement.muscle_mass_kg || 0,
-      circumference: userData.latest_body_measurement.circumference_cm || 0,
+      // weight: userData.latest_body_measurement.weight || 0,
+      // weight_kg: userData.latest_body_measurement.weight_kg || 0,
+      // bodyFat: userData.latest_body_measurement.body_fat_percentage || 0,
+      // muscleMass: userData.latest_body_measurement.muscle_mass_kg || 0,
+      // circumference: userData.latest_body_measurement.circumference_cm || 0,
     } ,
     // Ensure target_nutrition_data is never null, use defaults if null/undefined
     target_nutrition_data: sanitizedTargetNutrition,
@@ -135,8 +135,14 @@ export const AuthProvider = ({ children }) => {
         // Check if subscription has expired
         const expiryDate = new Date(subscriptionExpiry);
         const now = new Date();
+        console.log('🔍 AuthContext checking subscription expiry:');
+        console.log('  - Expiry date:', subscriptionExpiry, '→', expiryDate);
+        console.log('  - Current date:', now);
+        console.log('  - Is expired?', now > expiryDate);
+        
         if (now > expiryDate) {
           // Subscription has expired
+          console.log('🚨 AuthContext: Subscription has expired, cleaning up...');
           await AsyncStorage.setItem('isSubscribed', 'false');
           await AsyncStorage.removeItem('subscriptionExpiry');
           setAuthState(prev => sanitizeAuthState({

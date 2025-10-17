@@ -14,6 +14,13 @@ const NutritionSummary = ({ currentNutrition, targetNutrition, navigation, onRes
     return 0;
   };
 
+  // Format macro values to a single decimal place for display
+  const formatValue = (value) => {
+    const numeric = Number(value);
+    if (!isFinite(numeric)) return '0.0';
+    return numeric.toFixed(1);
+  };
+
   return (
     <View style={styles.nutritionContainer}>
       <View style={styles.headerRow}>
@@ -40,7 +47,7 @@ const NutritionSummary = ({ currentNutrition, targetNutrition, navigation, onRes
         <View style={styles.nutritionTextContainer}>
           <View style={styles.valueWithIcon}>
             <Text style={styles.nutritionValue}>
-              {currentNutrition.calories} / {targetNutrition.calories}
+              {formatValue(currentNutrition.calories)} / {formatValue(targetNutrition.calories)}
             </Text>
             <InfoIcon type="calories" size={14} />
           </View>
@@ -64,7 +71,7 @@ const NutritionSummary = ({ currentNutrition, targetNutrition, navigation, onRes
           <View style={styles.nutritionDetailText}>
             <View style={styles.valueWithIcon}>
               <Text style={styles.nutritionDetailValue}>
-                {currentNutrition.carbs} / {targetNutrition.carbs}
+                {formatValue(currentNutrition.carbs)} / {formatValue(targetNutrition.carbs)}
               </Text>
             </View>
             <Text style={styles.nutritionDetailLabel}>Carbs (g)</Text>
@@ -85,7 +92,7 @@ const NutritionSummary = ({ currentNutrition, targetNutrition, navigation, onRes
           <View style={styles.nutritionDetailText}>
             <View style={styles.valueWithIcon}>
               <Text style={styles.nutritionDetailValue}>
-                {currentNutrition.proteins} / {targetNutrition.proteins} 
+                {formatValue(currentNutrition.proteins)} / {formatValue(targetNutrition.proteins)} 
               </Text>
             </View>
             <Text style={styles.nutritionDetailLabel}>Protein (g)</Text>
@@ -106,7 +113,7 @@ const NutritionSummary = ({ currentNutrition, targetNutrition, navigation, onRes
           <View style={styles.nutritionDetailText}>
             <View style={styles.valueWithIcon}>
               <Text style={styles.nutritionDetailValue}>
-                {currentNutrition.fats} / {targetNutrition.fats} 
+                {formatValue(currentNutrition.fats)} / {formatValue(targetNutrition.fats)} 
               </Text>
             </View> 
             <Text style={styles.nutritionDetailLabel}>Fats (g)</Text>

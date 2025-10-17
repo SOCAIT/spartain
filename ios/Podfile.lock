@@ -7,6 +7,8 @@ PODS:
   - hermes-engine (0.76.5):
     - hermes-engine/Pre-built (= 0.76.5)
   - hermes-engine/Pre-built (0.76.5)
+  - PurchasesHybridCommon (17.6.0):
+    - RevenueCat (= 5.38.2)
   - RCT-Folly (2024.01.01.00):
     - boost
     - DoubleConversion
@@ -1242,6 +1244,27 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - react-native-image-picker (8.2.1):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - react-native-safe-area-context (5.4.0):
     - DoubleConversion
     - glog
@@ -1367,6 +1390,27 @@ PODS:
     - React-graphics
     - React-ImageManager
     - react-native-video/Fabric
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
+  - react-native-webview (13.15.0):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
     - React-NativeModulesApple
     - React-RCTFabric
     - React-rendererdebug
@@ -1642,6 +1686,7 @@ PODS:
     - React-logger (= 0.76.5)
     - React-perflogger (= 0.76.5)
     - React-utils (= 0.76.5)
+  - RevenueCat (5.38.2)
   - RNCAsyncStorage (2.1.2):
     - DoubleConversion
     - glog
@@ -1690,6 +1735,9 @@ PODS:
     - RCTTypeSafety
     - React-Core
     - ReactCommon/turbomodule/core
+  - RNPurchases (9.4.2):
+    - PurchasesHybridCommon (= 17.6.0)
+    - React-Core
   - RNScreens (4.10.0):
     - DoubleConversion
     - glog
@@ -1799,6 +1847,29 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - Sahha (1.2.5)
+  - SahhaReactNative (1.2.7):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Sahha (~> 1.2.5)
+    - Yoga
   - SocketRocket (0.7.1)
   - VisionCamera (4.6.4):
     - VisionCamera/Core (= 4.6.4)
@@ -1846,9 +1917,11 @@ DEPENDENCIES:
   - React-logger (from `../node_modules/react-native/ReactCommon/logger`)
   - React-Mapbuffer (from `../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
+  - react-native-image-picker (from `../node_modules/react-native-image-picker`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-secure-key-store (from `../node_modules/react-native-secure-key-store`)
   - react-native-video (from `../node_modules/react-native-video`)
+  - react-native-webview (from `../node_modules/react-native-webview`)
   - React-nativeconfig (from `../node_modules/react-native/ReactCommon`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-perflogger (from `../node_modules/react-native/ReactCommon/reactperflogger`)
@@ -1879,14 +1952,19 @@ DEPENDENCIES:
   - "RNCAsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - "RNCPicker (from `../node_modules/@react-native-picker/picker`)"
   - RNIap (from `../node_modules/react-native-iap`)
+  - RNPurchases (from `../node_modules/react-native-purchases`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
+  - SahhaReactNative (from `../node_modules/sahha-react-native`)
   - VisionCamera (from `../node_modules/react-native-vision-camera`)
   - Yoga (from `../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
   trunk:
+    - PurchasesHybridCommon
+    - RevenueCat
+    - Sahha
     - SocketRocket
 
 EXTERNAL SOURCES:
@@ -1961,12 +2039,16 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon"
   React-microtasksnativemodule:
     :path: "../node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
+  react-native-image-picker:
+    :path: "../node_modules/react-native-image-picker"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
   react-native-secure-key-store:
     :path: "../node_modules/react-native-secure-key-store"
   react-native-video:
     :path: "../node_modules/react-native-video"
+  react-native-webview:
+    :path: "../node_modules/react-native-webview"
   React-nativeconfig:
     :path: "../node_modules/react-native/ReactCommon"
   React-NativeModulesApple:
@@ -2027,12 +2109,16 @@ EXTERNAL SOURCES:
     :path: "../node_modules/@react-native-picker/picker"
   RNIap:
     :path: "../node_modules/react-native-iap"
+  RNPurchases:
+    :path: "../node_modules/react-native-purchases"
   RNScreens:
     :path: "../node_modules/react-native-screens"
   RNSVG:
     :path: "../node_modules/react-native-svg"
   RNVectorIcons:
     :path: "../node_modules/react-native-vector-icons"
+  SahhaReactNative:
+    :path: "../node_modules/sahha-react-native"
   VisionCamera:
     :path: "../node_modules/react-native-vision-camera"
   Yoga:
@@ -2045,6 +2131,7 @@ SPEC CHECKSUMS:
   fmt: 10c6e61f4be25dc963c36bd73fc7b1705fe975be
   glog: 08b301085f15bcbb6ff8632a8ebaf239aae04e6a
   hermes-engine: 06a9c6900587420b90accc394199527c64259db4
+  PurchasesHybridCommon: 3e27aec7bccba3d3d34cd66a7033ba9b268caa5e
   RCT-Folly: bf5c0376ffe4dd2cf438dcf86db385df9fdce648
   RCTDeprecation: fb7d408617e25d7f537940000d766d60149c5fea
   RCTRequired: 9aaf0ffcc1f41f0c671af863970ef25c422a9920
@@ -2074,9 +2161,11 @@ SPEC CHECKSUMS:
   React-logger: 697873f06b8ba436e3cddf28018ab4741e8071b6
   React-Mapbuffer: c174e11bdea12dce07df8669d6c0dc97eb0c7706
   React-microtasksnativemodule: 8a80099ad7391f4e13a48b12796d96680f120dc6
+  react-native-image-picker: aec6d7db7ee9020a2c8041128c0bfaa48a41d0ca
   react-native-safe-area-context: 6f13318b9c98ef8c81b3272b60f56a3f981cf223
   react-native-secure-key-store: 910e6df6bc33cb790aba6ee24bc7818df1fe5898
   react-native-video: 4f7dc0e9c14a2cd2c438c0fe8392c3c98bdd29bb
+  react-native-webview: 2505a8acf452640e3074f638b5489816e4ba7024
   React-nativeconfig: f7ab6c152e780b99a8c17448f2d99cf5f69a2311
   React-NativeModulesApple: 70600f7edfc2c2a01e39ab13a20fd59f4c60df0b
   React-perflogger: ceb97dd4e5ca6ff20eebb5a6f9e00312dcdea872
@@ -2104,12 +2193,16 @@ SPEC CHECKSUMS:
   React-utils: 541c6cca08f32597d4183f00e83eef2ed20d4c54
   ReactCodegen: daa13d9e48c9bdb1daac4bd694b9dd54e06681df
   ReactCommon: a6b87a7591591f7a52d9c0fec3aa05e0620d5dd3
+  RevenueCat: f6b7c7e55f548a2bf304a3abbed0cc2447364427
   RNCAsyncStorage: d1a3d7b8d4e234191fd5edc850f965e76f5fb387
   RNCPicker: d23ebebb0c66864ac3edf260c20f8a4470aa2769
   RNIap: daac81aa70fe3ac6d6967c1c8da3dc4b415b73d6
+  RNPurchases: 06f3af43ac937efa83b66a86ff2241fcee44e3bb
   RNScreens: 34770a3bf9e25f54c8e4683c2b20a20ab2b0c3a4
   RNSVG: 2df153c20fffef75a099c23836cd5e9ecba386fe
   RNVectorIcons: 07792a9538e8577c1263fcad187712e90d65d8fb
+  Sahha: d308995f3fe3a333d1d61ca6d22be68f2d5acbad
+  SahhaReactNative: b6f7ec5f130d2f2cf9f31672110c1a2a21bde11f
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   VisionCamera: b5c2b3c45e641102902a5194af11dc532805221e
   Yoga: fcc198acd4a55599b3468cfb6ebc526baff5f06e

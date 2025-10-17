@@ -68,6 +68,14 @@
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Share workout data with other apps.</string>
 
+	    <!-- Allow picking photos and videos from the user’s library -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Select image or video to upload</string>
+
+    <!-- Allow recording audio when capturing video -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Record audio with your videos</string>
+
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>UISupportedInterfaceOrientations~ipad</key>

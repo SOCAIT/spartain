@@ -1,9 +1,15 @@
 // src/services/HealthKitService.js
-// import AppleHealthKit, {
-//   HealthValue,
-//   HealthKitPermissions,
-// }  from 'react-native-health';
+import { useHealthkitAuthorization, saveQuantitySample } from '@kingstinct/react-native-healthkit';
 
+const [authorizationStatus, requestAuthorization] = useHealthkitAuthorization(['HKQuantityTypeIdentifierBloodGlucose'])
+
+// make sure that you've requested authorization before requesting data, otherwise your app will crash
+import { useMostRecentQuantitySample, HKQuantityTypeIdentifier, useMostRecentCategorySample } from '@kingstinct/react-native-healthkit';
+
+const mostRecentBloodGlucoseSample = useMostRecentQuantitySample('HKQuantityTypeIdentifierBloodGlucose')
+const lastBodyFatSample = useMostRecentQuantitySample('HKQuantityTypeIdentifierBodyFatPercentage')
+const lastMindfulSession = useMostRecentCategorySample('HKCategoryTypeIdentifierMindfulSession')
+const lastWorkout = useMostRecentWorkout()
 
 // const PERMS = AppleHealthKit.Constants.Permissions;
 

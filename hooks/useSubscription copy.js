@@ -2,7 +2,6 @@ import { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../helpers/AuthContext';
 import { Alert, Platform, Linking } from 'react-native';
 import * as RNIap from 'react-native-iap';
-import Purchases from 'react-native-purchases';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Product IDs matching SubscriptionDetails.js
@@ -49,24 +48,6 @@ export const useSubscription = () => {
     try {
       setIsLoading(true);
       
-      // Prefer RevenueCat entitlements (server-validated)
-      try {
-        const info = await Purchases.getCustomerInfo();
-        const entitlement = info?.entitlements?.active?.premium;
-        if (entitlement) {
-          const rcStatus = {
-            isValid: true,
-            source: 'revenuecat',
-            expiryDate: entitlement.expirationDate || null,
-            lastChecked: new Date().toISOString(),
-            productId: entitlement.productIdentifier || undefined
-          };
-          await updateSubscriptionFromValidation(rcStatus);
-          setIsLoading(false);
-          return rcStatus;
-        }
-      } catch (_) {}
-
       // Method 1: Check IAP receipts (most reliable)
       const iapStatus = await checkIAPSubscription();
       if (iapStatus.isValid) {
@@ -373,24 +354,6 @@ export const useSubscription = () => {
               };
               
               await updateSubscriptionFromValidation(newStatus);
-
-              // Sync with RevenueCat so entitlements update immediately (no relogin needed)
-              try {
-                await Purchases.syncPurchases();
-                const info = await Purchases.getCustomerInfo();
-                const entitlement = info?.entitlements?.active?.premium;
-                if (entitlement) {
-                  await updateSubscriptionFromValidation({
-                    isValid: true,
-                    source: 'revenuecat',
-                    expiryDate: entitlement.expirationDate || null,
-                    lastChecked: new Date().toISOString(),
-                    productId: entitlement.productIdentifier || undefined,
-                  });
-                }
-              } catch (e) {
-                console.warn('RevenueCat sync after IAP purchase failed:', e);
-              }
               setShowSubscriptionModal(false);
               Alert.alert("Purchase successful!", "Thank you for subscribing to Fitness AI Pro.");
             } catch (finishErr) {

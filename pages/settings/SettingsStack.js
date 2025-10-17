@@ -2,7 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import Settings from './Settings';
-import ProSubscriptionScreen from '../SubscriptionDetails';
+import SubscriptionScreenRevenueCat from '../SubscriptionDetailsRevenueCat';
 import ComingSoonScreen from '../Soon';
 import AboutReferences from './AboutReferences';
 // import ChangePassword from './ChangePassword'; // A screen to change the password
@@ -19,7 +19,7 @@ const SettingsStack = () => {
         > 
             <Stack.Screen name="Settings" component={Settings} />
             <Stack.Screen name="Soon" component={ComingSoonScreen} />
-            <Stack.Screen name="Subscription" component={ProSubscriptionScreen} />
+            <Stack.Screen name="Subscription" component={SubscriptionScreenRevenueCat} />
             <Stack.Screen name="AboutReferences" component={AboutReferences} />
             
 

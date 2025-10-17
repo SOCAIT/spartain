@@ -10,7 +10,7 @@ import BodyAnalyzerScreen from './BodyAnalyzer'
 import CameraScreen from './Camera'
 import PhotoPreview from './PhotoPreview'
 import AnalysisResult from './AnalysisResult'
-import ProSubscriptionScreen from '../SubscriptionDetails'
+import SubscriptionScreenRevenueCat from '../SubscriptionDetailsRevenueCat'
 
 const Stack = createNativeStackNavigator()
 
@@ -27,7 +27,7 @@ const AIStack = () => {
         <Stack.Screen name="CameraScreen" component={CameraScreen} />
         <Stack.Screen name="PhotoPreview" component={PhotoPreview} />
         <Stack.Screen name="AnalysisResult" component={AnalysisResult} />
-        <Stack.Screen name="Subscription" component={ProSubscriptionScreen} />
+        <Stack.Screen name="Subscription" component={SubscriptionScreenRevenueCat} />
 
         {/* <Stack.Screen name="NutritionPlan" component={NutritionPlanScreen} /> */}
       </Stack.Navigator> 

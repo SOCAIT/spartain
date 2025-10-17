@@ -13,6 +13,8 @@ const RecipeScreen = ({navigation, route}) => {
 
   const { meal } = route.params;
 
+  console.log(meal);
+
   const addMealToDiary = async () => {
     try {
       const macros = {
@@ -105,7 +107,7 @@ const RecipeScreen = ({navigation, route}) => {
       <InstructionsModal
      visible={modalVisible}
      onClose={() => setModalVisible(false)}
-     instructions={" Recipe: " + (meal.steps === "" ? "No steps provided. Ask the SyntraFit Hermes to provide you with the recipe :) |Try this prompt: Give me the instructions to make " + meal.name + " recipe" : meal.steps)}
+     instructions={" Recipe: " + (meal.steps === "" ? "No steps provided. Ask the SyntraFit Hermes to provide you with the recipe or even a Youtube video :) |Try this prompt: Give me the instructions (or find me a Youtube video) to make " + meal.name + " recipe" : meal.steps)}
    />
     </ScrollView>
    

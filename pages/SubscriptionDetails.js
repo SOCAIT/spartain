@@ -15,6 +15,7 @@ import ArrowHeaderNew from "../components/ArrowHeaderNew";
 import { COLORS } from "../constants";
 import * as RNIap from "react-native-iap";
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useSubscription } from "../hooks/useSubscription";
 
 const subscription_group = "syntrafit_sub_group";
 
@@ -26,6 +27,7 @@ const productIds = [
 ];
 
 const ProSubscriptionScreen = ({ navigation }) => {
+  const { openManageSubscriptions } = useSubscription();
   const [isYearly, setIsYearly] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [products, setProducts] = useState([]);
@@ -327,6 +329,23 @@ const ProSubscriptionScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
 
+          {/* Manage subscription button */}
+          <TouchableOpacity
+            style={styles.manageButton}
+            onPress={() => {
+              try {
+                // Try to infer yearly vs monthly from selected plan if any
+                const productObj = products.find(p => p.productId === selectedPlan);
+                const isYearly = productObj ? isYearlyProduct(productObj) : false;
+                openManageSubscriptions(isYearly);
+              } catch (_e) {
+                openManageSubscriptions(false);
+              }
+            }}
+          >
+            <Text style={styles.manageText}>Manage subscription</Text>
+          </TouchableOpacity>
+
           <View style={styles.footerContainer}>
             <TouchableOpacity onPress={() => setPrivacyModalVisible(true)}>
               <Text style={styles.footerText}>Privacy Policy</Text>
@@ -492,6 +511,18 @@ const styles = StyleSheet.create({
     color: "#000",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  manageButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: 10,
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 8,
+  },
+  manageText: {
+    color: '#fff',
+    textDecorationLine: 'underline',
+    fontSize: 14,
   },
   footerContainer: {
     flexDirection: "row",

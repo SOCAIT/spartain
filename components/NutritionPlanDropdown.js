@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, Modal, View, FlatList } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, Modal, View, FlatList, Alert } from 'react-native';
 import { COLORS, SIZES } from '../constants';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import axios from 'axios';
+import { backend_url } from '../config/config';
 
-const NutritionPlanDropdown = ({ label, data, onSelect }) => {
+const NutritionPlanDropdown = ({ label, data, onSelect, onDelete }) => {
   const [visible, setVisible] = useState(false);
   const DropdownButton = useRef();
   const [dropdownTop, setDropdownTop] = useState(0);
@@ -54,10 +56,50 @@ const NutritionPlanDropdown = ({ label, data, onSelect }) => {
     setVisible(true);
   };
 
+  const handleDeletePlan = (item, event) => {
+    event.stopPropagation();
+    
+    Alert.alert(
+      'Delete Plan',
+      `Are you sure you want to delete "${item.label}"?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await axios.delete(`${backend_url}meal_plan/${item.value}/`);
+              Alert.alert('Success', 'Plan deleted successfully');
+              setVisible(false);
+              if (onDelete) {
+                onDelete(item.value);
+              }
+            } catch (error) {
+              console.error('Error deleting plan:', error);
+              Alert.alert('Error', 'Failed to delete plan');
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.item} onPress={() => onItemPress(item)}>
-      <Text style={styles.buttonText}>{item.label }</Text>
-    </TouchableOpacity>
+    <View style={styles.itemContainer}>
+      <TouchableOpacity style={styles.item} onPress={() => onItemPress(item)}>
+        <Text style={styles.buttonText}>{item.label}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={styles.deleteButton} 
+        onPress={(e) => handleDeletePlan(item, e)}
+      >
+        <MaterialIcons name="delete" size={24} color={COLORS.red || '#FF4444'} />
+      </TouchableOpacity>
+    </View>
   );
 
   const onItemPress = (item) => {
@@ -96,9 +138,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: COLORS.white,
   },
+  itemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingRight: SIZES.padding,
+  },
   item: {
     padding: SIZES.padding,
     flexDirection: 'row',
+    flex: 1,
+  },
+  deleteButton: {
+    padding: SIZES.padding / 2,
+    marginLeft: 10,
   },
 });
 

@@ -24,6 +24,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import OnboardingScreen from './pages/onboarding/OnboardingScreen';
 import Wizard from './pages/onboarding/OnboardingWizard';
 
+import { runSahhaMinimalTest } from './services/HealthKitService';
+
 axios.defaults.headers.common['Connection'] = 'close';
 
 const MyTheme = {
@@ -62,18 +64,45 @@ const SplashScreen = () => {
   );
 };
 
+import Purchases, {LOG_LEVEL, CustomerInfo} from 'react-native-purchases';
+import { Platform } from 'react-native';
 
+const REVENUECAT_API_KEY = Platform.select({
+  ios: 'appl_KHUmUupOtJXSBnhSNbxpSyzZnOd',
+  android: 'google_D3E15744',
+});
+
+export async function initRevenueCat(appUserId: string) {
+  Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+
+    if (Platform.OS === 'ios') {
+       Purchases.configure({apiKey: REVENUECAT_API_KEY as string});
+    } else if (Platform.OS === 'android') {
+       Purchases.configure({apiKey: REVENUECAT_API_KEY as string});
+     }
+}
+ 
 function App(): React.JSX.Element {
   const [token, setToken] = useState("");
   const [authState, setAuthState] = useState<any>({
     username: "",
     id: 0,
     status: false,
-    profile_photo: ""
+    profile_photo: "",
+    isSubscribed: false,
+    subscriptionExpiry: null
   });
 
   const [isLoading, setIsLoading] = useState(true);
   const [hasOnboarded, setHasOnboarded] = useState(null as null | boolean);
+
+  const [hr, setHr] = useState<number | null>(null);
+  const [steps, setSteps] = useState<number | null>(null);
+  const [sleepScore, setSleepScore] = useState<number | null>(null);
+  const [wellbeingScore, setWellbeingScore] = useState<number | null>(null);
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+
 
   const getOnboardKey = (username?: string) => `hasOnboarded${username ? `_${username}` : ''}`;
 
@@ -93,10 +122,90 @@ function App(): React.JSX.Element {
       });
   };
 
+  const addDebugLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setDebugLogs(prev => [`[${timestamp}] ${message}`, ...prev].slice(0, 5));
+    console.log(message);
+  };
+
+  const runTest = async () => {
+    setLoading(true);
+    try {
+      addDebugLog('Configuring Sahha and fetching resting heart rate biomarkers...');
+      const result = await runSahhaMinimalTest(addDebugLog);
+      setHr(result.bpm);
+      setSteps(result.steps);
+      setSleepScore(result.sleepScore);
+      setWellbeingScore(result.wellbeingScore);
+      addDebugLog(`Fetched resting heart rate: ${result.bpm ?? 'none'} bpm, steps: ${result.steps ?? 'none'}`);
+      addDebugLog(`Scores - sleep: ${result.sleepScore ?? 'none'}, wellbeing: ${result.wellbeingScore ?? 'none'}`);
+    } catch (error) {
+      addDebugLog(`Error during minimal HealthKit test: ${error}`);
+      Alert.alert('Error', 'Minimal HealthKit test failed. See debug logs.');
+    } finally {
+      setLoading(false);
+    }
+  };
+ 
   // First useEffect to retrieve token.
   useEffect(() => {
+    runTest();
+   
     getValueFor("accessToken", setToken);
     test_api();
+    initRevenueCat(authState.username);
+    // Listen for RevenueCat entitlement updates and reflect in authState
+    try {
+      Purchases.addCustomerInfoUpdateListener((info: CustomerInfo) => {
+        console.log('info', info);
+        const premium = info?.entitlements?.active?.premium;
+        // const isPro = !!premium;
+
+        const pro = info?.entitlements?.active?.["Pro"];
+        const isPro = !!pro;
+        const expiry = (pro as any)?.expirationDate || null;
+
+         
+        setAuthState((prev: any) => ({
+          ...prev,
+          isSubscribed: isPro,
+          subscriptionExpiry: expiry,
+        }));
+      }) ;
+    } catch (_) {}
+    // Initial RC status fetch
+    (async () => {
+      try {
+        const info = await Purchases.getCustomerInfo();
+        const pro = info?.entitlements?.active?.["Pro"];
+        const isPro = !!pro;
+        const expiry = (pro as any)?.expirationDate || null;
+        if (isPro) {
+          setAuthState((prev: any) => ({ ...prev, isSubscribed: true, subscriptionExpiry: expiry }));
+        }
+      } catch (_) {}
+    })();
+    // Check and clear expired subscription data on app start
+    const checkExpiredSubscription = async () => {
+      try {
+        const subscriptionExpiry = await AsyncStorage.getItem('subscriptionExpiry');
+        if (subscriptionExpiry) {
+          const expiryDate = new Date(subscriptionExpiry);
+          const now = new Date();
+          
+          if (now > expiryDate) {
+            console.log('Found expired subscription, cleaning up...');
+            await AsyncStorage.setItem('isSubscribed', 'false');
+            await AsyncStorage.removeItem('subscriptionExpiry');
+            console.log('✅ Expired subscription cleaned up');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking expired subscription:', error);
+      }
+    };
+    
+    checkExpiredSubscription();
   }, []);
 
   // Second useEffect to perform the auth check when token is available.
@@ -118,17 +227,60 @@ function App(): React.JSX.Element {
         // Check if response returns an error detail, otherwise assume authorized.
         if (response.data.detail) {
           console.log("Error in auth");
-          setAuthState({ username: "", id: 0, status: false, profile_photo: "" });
+          setAuthState({ username: "", id: 0, status: false, profile_photo: "", isSubscribed: false, subscriptionExpiry: null });
         } else {
           console.log("Authorized:", response.data);
-          setAuthState({
-            username: response.data.username, id: response.data.id, status: true,
-            profile_photo: response.data.profile_photo,  age: response.data.age, height: response.data.height_cm,
-            user_target: response.data.user_target, latest_body_measurement: response.data.latest_body_measurement,
-             gender: response.data.gender, target_nutrition_data: response.data.target_nutrition_data,
-             dietary_preferences: response.data.dietary_preferences,
-             activity_level: response.data.activity_level,
-          })
+          // Load subscription status from AsyncStorage with expiry check
+          AsyncStorage.getItem('isSubscribed').then(isSubscribed => {
+            AsyncStorage.getItem('subscriptionExpiry').then(subscriptionExpiry => {
+              
+              // Check if subscription has expired
+              let finalIsSubscribed = false;
+              let finalSubscriptionExpiry = null;
+              
+              if (isSubscribed === 'true' && subscriptionExpiry) {
+                const expiryDate = new Date(subscriptionExpiry);
+                const now = new Date();
+                
+                if (now <= expiryDate) {
+                  // Subscription is still valid
+                  finalIsSubscribed = true;
+                  finalSubscriptionExpiry = subscriptionExpiry;
+                } else {
+                  // Subscription has expired, clean it up
+                  console.log('🚨 Found expired subscription, cleaning up...');
+                  AsyncStorage.setItem('isSubscribed', 'false');
+                  AsyncStorage.removeItem('subscriptionExpiry');
+                  finalIsSubscribed = false;
+                  finalSubscriptionExpiry = null;
+                }
+              }
+              
+              setAuthState({
+                username: response.data.username, id: response.data.id, status: true,
+                profile_photo: response.data.profile_photo,  age: response.data.age, height: response.data.height_cm,
+                user_target: response.data.user_target, latest_body_measurement: response.data.latest_body_measurement,
+                gender: response.data.gender, target_nutrition_data: response.data.target_nutrition_data,
+                dietary_preferences: response.data.dietary_preferences,
+                activity_level: response.data.activity_level,
+                isSubscribed: finalIsSubscribed,
+                subscriptionExpiry: finalSubscriptionExpiry,
+              });
+              // RevenueCat login and overwrite with entitlement status if present
+              (async () => {
+                try {
+                  await Purchases.logIn(String(response.data.id || response.data.username));
+                  const info = await Purchases.getCustomerInfo();
+                  const premium = (info as any)?.entitlements?.active?.premium;
+                  const isPro = !!premium;
+                  const expiry = premium?.expirationDate || null;
+                  if (isPro || expiry) {
+                    setAuthState((prev: any) => ({ ...prev, isSubscribed: isPro, subscriptionExpiry: expiry }));
+                  }
+                } catch (_) {}
+              })();
+            });
+          });
         }
       })
       .catch((error) => {
@@ -138,7 +290,7 @@ function App(): React.JSX.Element {
         console.log('config:', error.config);
         console.log('request:', error.request);   // <—— this should be an XMLHttpRequest instance
         console.log('response:', error.response); // likely undefined in Network Error
-        setAuthState({ username: "", id: 0, status: false, profile_photo: "" });
+        setAuthState({ username: "", id: 0, status: false, profile_photo: "", isSubscribed: false, subscriptionExpiry: null });
       })
       .finally(() => {
         // Mark loading as complete whether authorized or not.
@@ -179,8 +331,9 @@ function App(): React.JSX.Element {
     try {
       await AsyncStorage.removeItem('accessToken');
       await AsyncStorage.removeItem('refreshToken');
+      try { await Purchases.logOut(); } catch (_) {}
       setToken('');
-      setAuthState({ username: "", id: 0, status: false, profile_photo: "" });
+      setAuthState({ username: "", id: 0, status: false, profile_photo: "", isSubscribed: false, subscriptionExpiry: null });
     } catch (e) {
       console.error('Logout error:', e);
     }
@@ -193,12 +346,32 @@ function App(): React.JSX.Element {
       // Clear stored tokens & state
       await AsyncStorage.removeItem('accessToken');
       await AsyncStorage.removeItem('refreshToken');
+      await AsyncStorage.removeItem('isSubscribed');
+      await AsyncStorage.removeItem('subscriptionExpiry');
       setToken('');
-      setAuthState({ username: "", id: 0, status: false, profile_photo: "" });
+      setAuthState({ username: "", id: 0, status: false, profile_photo: "", isSubscribed: false, subscriptionExpiry: null });
       return { success: response.status === 200 || response.status === 204 };
     } catch (error) {
       console.error('Delete account error:', error);
       return { success: false, error: 'Failed to delete account' };
+    }
+  };
+
+  // Add updateSubscriptionStatus function for subscription management
+  const updateSubscriptionStatus = async (isSubscribed: boolean, expiryDate: string | null = null) => {
+    try {
+      await AsyncStorage.setItem('isSubscribed', isSubscribed.toString());
+      if (expiryDate) {
+        await AsyncStorage.setItem('subscriptionExpiry', expiryDate);
+      }
+      
+      setAuthState((prev: any) => ({
+        ...prev,
+        isSubscribed,
+        subscriptionExpiry: expiryDate,
+      }));
+    } catch (error) {
+      console.error('Error updating subscription status:', error);
     }
   };
 
@@ -208,7 +381,7 @@ function App(): React.JSX.Element {
   }
 
   return (
-    <AuthContext.Provider value={{ authState, setAuthState, logout, deleteAccount }}>
+    <AuthContext.Provider value={{ authState, setAuthState, logout, deleteAccount, updateSubscriptionStatus }}>
       <NavigationContainer theme={MyTheme}>
       {authState.status ? (
         hasOnboarded ? (

@@ -17,6 +17,7 @@ import CustomProgressChart from '../../components/charts/CustomProgressChart';
 // import { useDataCollection, useScreenTracking } from '../../hooks/useDataCollection';
 // import DataCollectionTest from '../../components/DataCollectionTest';
 import { useScreenTracking } from '../../hooks/useDataCollection';
+import HealthKitDashboard from './HealthKitDashboard';
 
 const USER= {
    "username": "Lelouch",
@@ -176,6 +177,7 @@ export default function MainScreen({navigation}) {
       {/* Body Measurements */}
       <SectionHeader title={"User Info"} childComponent={<BodyMeasurements navigation={navigation} />} /> {/*  */}
 
+      {/* <SectionHeader title={"Fitness Analysis"} childComponent={<HealthKitDashboard navigation={navigation} />} /> */}
       {/* Charts */}
       {/* <SectionHeader title={"Progress Charts"} childComponent={<ChartDisplay navigation={navigation} charts={charts} />} /> */}
 

@@ -30,12 +30,31 @@ const getLastSixMonths = () => {
 const lastSixMonths = getLastSixMonths();
 
 // Initial dummy data
+const repBins = ["4-5 reps", "6-8 reps", "9-12 reps", "12+ reps"];
 const dummyData = {
-  average_weight: {
-    "12+ reps": Object.fromEntries(lastSixMonths.map(month => [month, 0])),
-    "4-5 reps": Object.fromEntries(lastSixMonths.map(month => [month, 0])),
-    "6-8 reps": Object.fromEntries(lastSixMonths.map(month => [month, 0])),
-    "9-12 reps": Object.fromEntries(lastSixMonths.map(month => [month, 0]))
+  monthly: {
+    periods: lastSixMonths,
+    average_weight: {
+      "12+ reps": Object.fromEntries(lastSixMonths.map(month => [month, 0])),
+      "4-5 reps": Object.fromEntries(lastSixMonths.map(month => [month, 0])),
+      "6-8 reps": Object.fromEntries(lastSixMonths.map(month => [month, 0])),
+      "9-12 reps": Object.fromEntries(lastSixMonths.map(month => [month, 0]))
+    }
+  },
+  weekly: {
+    periods: [],
+    average_weight: {
+      "4-5 reps": {},
+      "6-8 reps": {},
+      "9-12 reps": {},
+      "12+ reps": {}
+    }
+  },
+  latest_weight: {
+    "4-5 reps": 0,
+    "6-8 reps": 0,
+    "9-12 reps": 0,
+    "12+ reps": 0
   },
   max_weight: {
     "4-5 reps": 0,
@@ -53,8 +72,8 @@ const ExerciseDetailsScreen = ({ route }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [updateLogModalVisible, setUpdateLogModalVisible] = useState(false);
   // Use the dummy data as initial state
-  const [exerciseHistory, setExerciseHistory] = useState(dummyData.average_weight);
-  const [latestLogs, setLatestLogs] = useState(dummyData.max_weight);
+  const [exerciseHistory, setExerciseHistory] = useState({ monthly: dummyData.monthly, weekly: dummyData.weekly });
+  const [latestLogs, setLatestLogs] = useState({ latest: dummyData.latest_weight, max: dummyData.max_weight });
   // A refresh key to force re-render of child components when data updates
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -98,44 +117,67 @@ const ExerciseDetailsScreen = ({ route }) => {
   const fetchExerciseData = useCallback(() => {
     axios.post(backend_url + 'graphql/', graphql_user_ex_logs)
       .then(response => {
-        const data = JSON.parse(response.data.data.userExlogsByName);
-        if (data) {
-          // Merge data with dummy values for exerciseHistory (average_weight)
-          const updatedHistory = {};
-          Object.keys(dummyData.average_weight).forEach(repRange => {
-            updatedHistory[repRange] = {};
-            Object.keys(dummyData.average_weight[repRange]).forEach(month => {
-              updatedHistory[repRange][month] =
-                data.average_weight &&
-                data.average_weight[repRange] &&
-                data.average_weight[repRange][month] !== undefined
-                  ? data.average_weight[repRange][month]
-                  : dummyData.average_weight[repRange][month];
+        const parsed = JSON.parse(response.data.data.userExlogsByName);
+        if (parsed) {
+          // Build monthly history from per_month
+          const monthlyPeriods = Array.isArray(parsed?.per_month?.periods) ? parsed.per_month.periods : lastSixMonths;
+          const monthlyAverage = repBins.reduce((acc, bin) => {
+            acc[bin] = {};
+            monthlyPeriods.forEach(period => {
+              const v = parsed?.per_month?.average_weight?.[bin]?.[period] ?? 0;
+              acc[bin][period] = v;
             });
+            return acc;
+          }, {});
+
+          // Build weekly history from per_week
+          const weeklyPeriods = Array.isArray(parsed?.per_week?.periods) ? parsed.per_week.periods : [];
+          const weeklyAverage = repBins.reduce((acc, bin) => {
+            acc[bin] = {};
+            weeklyPeriods.forEach(period => {
+              const v = parsed?.per_week?.average_weight?.[bin]?.[period] ?? 0;
+              acc[bin][period] = v;
+            });
+            return acc;
+          }, {});
+
+          // Compute latest and max per-bin from weights_over_time
+          const latestByBin = {};
+          const maxByBin = {};
+          repBins.forEach(repRange => {
+            const entries = Array.isArray(parsed?.weights_over_time?.[repRange]) ? parsed.weights_over_time[repRange] : [];
+            if (entries.length > 0) {
+              const latestEntry = entries.reduce((acc, curr) => {
+                const accTime = new Date(acc.date).getTime();
+                const currTime = new Date(curr.date).getTime();
+                return currTime > accTime ? curr : acc;
+              }, entries[0]);
+              latestByBin[repRange] = typeof latestEntry?.weight === 'number' ? latestEntry.weight : 0;
+              maxByBin[repRange] = entries.reduce((m, curr) => {
+                const w = typeof curr?.weight === 'number' ? curr.weight : 0;
+                return w > m ? w : m;
+              }, 0);
+            } else {
+              latestByBin[repRange] = 0;
+              maxByBin[repRange] = 0;
+            }
           });
-  
-          // Merge data with dummy values for latestLogs (max_weight)
-          const updatedLatest = {};
-          Object.keys(dummyData.max_weight).forEach(repRange => {
-            updatedLatest[repRange] =
-              data.max_weight &&
-              data.max_weight[repRange] !== undefined
-                ? data.max_weight[repRange]
-                : dummyData.max_weight[repRange];
-          });
-  
-          // Only update if the new data differs from the current state
-          if (JSON.stringify(updatedHistory) !== JSON.stringify(exerciseHistory)) {
-            setExerciseHistory(updatedHistory);
+
+          const nextHistory = { monthly: { periods: monthlyPeriods, average_weight: monthlyAverage }, weekly: { periods: weeklyPeriods, average_weight: weeklyAverage } };
+          const nextLogs = { latest: latestByBin, max: maxByBin };
+
+          if (JSON.stringify(nextHistory) !== JSON.stringify(exerciseHistory)) {
+            setExerciseHistory(nextHistory);
           }
-          if (JSON.stringify(updatedLatest) !== JSON.stringify(latestLogs)) {
-            setLatestLogs(updatedLatest);
+          if (JSON.stringify(nextLogs) !== JSON.stringify(latestLogs)) {
+            setLatestLogs(nextLogs);
           }
-          // Optionally update refreshKey only if needed
           setRefreshKey(prevKey => prevKey + 1);
         }
       })
       .catch(error => {
+        console.log(error)
+        console.log(error.response.data)
         console.error('Error fetching exercise history:', error);
       });
   }, [graphql_user_ex_logs, exerciseHistory, latestLogs]);
@@ -264,7 +306,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.dark,
      paddingTop: Platform.OS === 'ios' ? 45 :0,
-     paddingHorizontal: Platform.OS === 'ios' ? 20 :0
+     paddingHorizontal: Platform.OS === 'ios' ? 10 :0
     //alignItems: 'center',
   },
   body:{

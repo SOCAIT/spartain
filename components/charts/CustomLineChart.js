@@ -1,4 +1,4 @@
-import { View, Text, useWindowDimensions } from 'react-native'
+import { View, Text, useWindowDimensions, ScrollView } from 'react-native'
 import React, {useState, useEffect} from 'react'
 
 import {
@@ -44,25 +44,30 @@ const chartConfig = {
 const CustomLineChart = ({chart_data}) => {
   const { width } = useWindowDimensions();
   
-  // Set a fixed width that works well on all devices
-  const chartWidth = Math.min(300, width - 40);
+  // Adapt width to the number of points to allow horizontal scroll when dense
+  const numPoints = Array.isArray(chart_data?.labels) ? chart_data.labels.length : 0;
+  const pointWidth = 50; // px per point for readability
+  const baseWidth = Math.max(300, width - 40);
+  const chartWidth = Math.max(baseWidth, numPoints * pointWidth);
  
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-      <LineChart
-        data={chart_data}
-        width={chartWidth}
-        height={220}
-        verticalLabelRotation={0}
-        chartConfig={chartConfig}
-        style={{ 
-          borderRadius: 15
-        }}
-        bezier
-        withInnerLines={false}
-        withOuterLines={false}
-        withDots={false}
-      />
+    <View style={{ alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 0 }}>
+        <LineChart
+          data={chart_data}
+          width={chartWidth}
+          height={220}
+          verticalLabelRotation={0}
+          chartConfig={chartConfig}
+          style={{ 
+            borderRadius: 15
+          }}
+          bezier
+          withInnerLines={false}
+          withOuterLines={false}
+          withDots={false}
+        />
+      </ScrollView>
     </View>
   )
 }

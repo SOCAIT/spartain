@@ -12,6 +12,8 @@ import NutritionInputScreen from './NutritionInput'
 import AINutritionPlan from '../chat/AINutritionPlan'
 import MealScanCamera from './MealScanCamera'
 import MealPhotoPreview from './MealPhotoPreview'
+// import PassioNutritionCamera from './PassioNutritionCamera'
+// import { PassioConfigurationView } from './PassioNutritionCamera'
 
 const Stack = createNativeStackNavigator()
 
@@ -27,7 +29,9 @@ const NutritionStack = () => {
           <Stack.Screen name="AddModifyPlan" component={AddNutritionPlan} />
           <Stack.Screen name="AddMealDayPlan" component={MealPlanScreen} />
           <Stack.Screen name="NutritionInput" component={NutritionInputScreen} />
-          <Stack.Screen name="MealScanCamera" component={MealScanCamera} />
+           <Stack.Screen name="MealScanCamera" component={MealScanCamera} /> 
+          {/* <Stack.Screen name="MealScanCamera" component={PassioConfigurationView} /> */}
+
           <Stack.Screen name="MealPhotoPreview" component={MealPhotoPreview} />
           <Stack.Screen name="AINutritionPlan" component={AINutritionPlan} />
 
