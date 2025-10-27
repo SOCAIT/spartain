@@ -9,6 +9,7 @@ import { backend_url } from '../../config/config';
 import { useForm, Controller } from 'react-hook-form';
 import { COLORS, SIZES, FONTS } from "../../constants"
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// import SocialAuthentication from '../../components/authentication/SocialAuthentication'; // DISABLED - Uncomment to enable Google/Apple Sign-In
 
 export default function SignUpScreen({ navigation }) {
   const { setAuthState } = useContext(AuthContext);
@@ -280,6 +281,20 @@ export default function SignUpScreen({ navigation }) {
             {!isLoading && <MaterialIcons name="arrow-forward" size={20} color="#FFF" style={styles.iconRight} />}
           </TouchableOpacity>
 
+          {/* GOOGLE/APPLE SIGN-IN - DISABLED FOR NOW */}
+          {/* Uncomment below to re-enable social authentication */}
+          {/*
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.divider} />
+          </View>
+
+          <View style={styles.socialContainer}>
+            <SocialAuthentication navigation={navigation} />
+          </View>
+          */}
+
           {/* Footer Links */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
@@ -370,6 +385,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginRight: 5,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#666',
+  },
+  dividerText: {
+    color: '#999',
+    paddingHorizontal: 10,
+    fontSize: 14,
+  },
+  socialContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginBottom: 20,
   },
   footer: {
     flexDirection: 'row',

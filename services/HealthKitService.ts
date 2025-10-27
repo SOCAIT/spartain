@@ -2,9 +2,53 @@ import { Platform } from 'react-native';
 import Sahha, { SahhaSensor, SahhaBiomarkerCategory, SahhaBiomarkerType, SahhaEnvironment, SahhaScoreType } from 'sahha-react-native';
 import { SAHHA_APP_ID, SAHHA_APP_SECRET, SAHHA_EXTERNAL_ID, hasSahhaCredentials } from '../config/sahha';
 
+export interface ExtendedHealthData {
+  // Vitals
+  bpm: number | null;
+  heartRateSleep: number | null;
+  hrv: number | null;
+  respiratoryRate: number | null;
+  oxygenSaturation: number | null;
+  vo2Max: number | null;
+  bloodPressureSystolic: number | null;
+  bloodPressureDiastolic: number | null;
+  
+  // Activity
+  steps: number | null;
+  floorsClimbed: number | null;
+  activeEnergyBurned: number | null;
+  totalEnergyBurned: number | null;
+  activeDuration: number | null;
+  exerciseTime: number | null;
+  
+  // Body Composition
+  weight: number | null;
+  height: number | null;
+  bmi: number | null;
+  bodyFat: number | null;
+  leanBodyMass: number | null;
+  
+  // Sleep
+  sleepDuration: number | null;
+  sleepEfficiency: number | null;
+  sleepLatency: number | null;
+  sleepDeepDuration: number | null;
+  sleepRemDuration: number | null;
+  sleepLightDuration: number | null;
+  
+  // Temperature
+  bodyTemperature: number | null;
+  
+  // Scores
+  sleepScore: number | null;
+  wellbeingScore: number | null;
+  activityScore: number | null;
+  readinessScore: number | null;
+}
+
 export async function runSahhaMinimalTest(
   addLog?: (msg: string) => void,
-): Promise<{ bpm: number | null; steps: number | null; sleepScore: number | null; wellbeingScore: number | null; raw: string }>{
+): Promise<ExtendedHealthData>{
   const log = (msg: string) => {
     console.log(msg);
     try { addLog && addLog(msg); } catch {}
@@ -34,10 +78,34 @@ export async function runSahhaMinimalTest(
     });
   }
 
+  // Enable all relevant sensors
+  const sensorsToEnable = [
+    SahhaSensor.heart_rate,
+    SahhaSensor.resting_heart_rate,
+    SahhaSensor.heart_rate_variability_sdnn,
+    SahhaSensor.steps,
+    SahhaSensor.floors_climbed,
+    SahhaSensor.active_energy_burned,
+    SahhaSensor.total_energy_burned,
+    SahhaSensor.sleep,
+    SahhaSensor.weight,
+    SahhaSensor.height,
+    SahhaSensor.body_mass_index,
+    SahhaSensor.body_fat,
+    SahhaSensor.lean_body_mass,
+    SahhaSensor.vo2_max,
+    SahhaSensor.oxygen_saturation,
+    SahhaSensor.respiratory_rate,
+    SahhaSensor.blood_pressure_systolic,
+    SahhaSensor.blood_pressure_diastolic,
+    SahhaSensor.body_temperature,
+    SahhaSensor.exercise_time,
+  ];
+
   await new Promise<void>((resolve, reject) => {
-    Sahha.enableSensors([SahhaSensor.heart_rate, SahhaSensor.steps], (error: string, _status) => {
+    Sahha.enableSensors(sensorsToEnable, (error: string, _status) => {
       if (error) return reject(new Error(error));
-      log('[SAHHA] sensors enabled: heart_rate, steps');
+      log('[SAHHA] sensors enabled');
       resolve();
     });
   });
@@ -46,86 +114,252 @@ export async function runSahhaMinimalTest(
   const start = new Date();
   start.setDate(end.getDate() - 7);
 
-  const getBpm = () => new Promise<number | null>((resolve, reject) => {
-    Sahha.getBiomarkers([
-      SahhaBiomarkerCategory.vitals,
-    ], [
-      SahhaBiomarkerType.heart_rate_resting,
-    ], start.getTime(), end.getTime(), (error: string, value: string) => {
-      if (error) return reject(new Error(error));
-      try {
-        const arr = JSON.parse(value) as Array<{ value?: number }>;
-        const last = Array.isArray(arr) && arr.length > 0 ? arr[arr.length - 1] : undefined;
-        log(`[SAHHA][getBiomarkers] heart_rate_resting raw: ${value}`);
-        resolve(last?.value ?? null);
-      } catch {
-        log('[SAHHA][getBiomarkers] parse error');
-        resolve(null);
-      }
-    })
-  });
-
-  const getSteps = () => new Promise<number | null>((resolve, reject) => {
-    Sahha.getSamples(
-      SahhaSensor.steps,
-      start.getTime(),
-      end.getTime(),
-      (error: string, value: string) => {
-        if (error) return reject(new Error(error));
+  // Helper to get biomarker
+  const getBiomarker = (type: SahhaBiomarkerType, category: SahhaBiomarkerCategory, aggregate: 'last' | 'sum' | 'avg' = 'last') => {
+    return new Promise<number | null>((resolve) => {
+      Sahha.getBiomarkers([category], [type], start.getTime(), end.getTime(), (error: string, value: string) => {
+        if (error) {
+          log(`[SAHHA][getBiomarker] ${type} error: ${error}`);
+          return resolve(null);
+        }
         try {
           const arr = JSON.parse(value) as Array<{ value?: number }>;
-          // Sum steps across the period
-          const total = Array.isArray(arr) ? arr.reduce((sum, s) => sum + (s?.value ?? 0), 0) : 0;
-          log(`[SAHHA][getSamples] steps raw: ${value}`);
-          resolve(Number.isFinite(total) ? total : null);
+          if (!Array.isArray(arr) || arr.length === 0) return resolve(null);
+          
+          if (aggregate === 'sum') {
+            const total = arr.reduce((sum, item) => sum + (item?.value ?? 0), 0);
+            resolve(Number.isFinite(total) ? total : null);
+          } else if (aggregate === 'avg') {
+            const total = arr.reduce((sum, item) => sum + (item?.value ?? 0), 0);
+            const avg = total / arr.length;
+            resolve(Number.isFinite(avg) ? avg : null);
+          } else {
+            const last = arr[arr.length - 1];
+            resolve(last?.value ?? null);
+          }
         } catch {
-          log('[SAHHA][getSamples] steps parse error');
+          log(`[SAHHA][getBiomarker] ${type} parse error`);
           resolve(null);
         }
-      }
-    );
-  });
+      });
+    });
+  };
 
-  const getScores = () => new Promise<{ sleep: number | null; wellbeing: number | null }>((resolve, reject) => {
+  // Get all scores and extract factors
+  const getScores = () => new Promise<{ 
+    sleep: number | null; 
+    wellbeing: number | null; 
+    activity: number | null; 
+    readiness: number | null;
+    factors: Map<string, number>;
+  }>((resolve) => {
     const scoreTypes = [
       SahhaScoreType.sleep,
       SahhaScoreType.wellbeing,
       SahhaScoreType.activity,
+      SahhaScoreType.readiness,
     ];
     Sahha.getScores(
       scoreTypes as any,
       start.getTime(),
       end.getTime(),
       (error: string, value: string) => {
-        if (error) return reject(new Error(error));
+        if (error) {
+          log(`[SAHHA][getScores] error: ${error}`);
+          return resolve({ sleep: null, wellbeing: null, activity: null, readiness: null, factors: new Map() });
+        }
         log(`[SAHHA][getScores] raw: ${value}`);
         try {
-          const arr = JSON.parse(value) as Array<{ type?: string; score?: number; value?: number; factors?: any[] }>;
+          const arr = JSON.parse(value) as Array<{ 
+            type?: string; 
+            score?: number; 
+            value?: number; 
+            factors?: Array<{ name: string; value: number; unit?: string }> 
+          }>;
+          
           const findScore = (t: string) => {
             const item = arr.find(i => i.type === t);
             if (!item) return null;
             const s = (typeof item.score === 'number' ? item.score : item.value) as number | undefined;
             return typeof s === 'number' ? s : null;
           };
-          const sleep = findScore('sleep');
-          const wellbeing = findScore('wellbeing');
-          const activity = findScore('activity');
-          const firstFactors = arr[0]?.factors ? JSON.stringify(arr[0].factors.slice(0, 2)) : '';
-          if (firstFactors) {
-            log(`[SAHHA][getScores] sample factors: ${firstFactors}`);
-          }
-          log(`[SAHHA][getScores] parsed: sleep=${sleep}, wellbeing=${wellbeing}`);
-          resolve({ sleep, wellbeing, activity });
+          
+          // Extract all factors from all scores
+          const factorsMap = new Map<string, number>();
+          arr.forEach(scoreItem => {
+            if (scoreItem.factors && Array.isArray(scoreItem.factors)) {
+              scoreItem.factors.forEach(factor => {
+                if (factor.name && typeof factor.value === 'number') {
+                  // Use the most recent value or average if multiple
+                  if (!factorsMap.has(factor.name)) {
+                    factorsMap.set(factor.name, factor.value);
+                  }
+                }
+              });
+            }
+          });
+          
+          log(`[SAHHA][getScores] extracted ${factorsMap.size} factors`);
+          
+          resolve({
+            sleep: findScore('sleep'),
+            wellbeing: findScore('wellbeing'),
+            activity: findScore('activity'),
+            readiness: findScore('readiness'),
+            factors: factorsMap,
+          });
         } catch (e) {
           log('[SAHHA][getScores] parse error');
-          resolve({ sleep: null, wellbeing: null, activity: null });
+          resolve({ sleep: null, wellbeing: null, activity: null, readiness: null, factors: new Map() });
         }
       }
     );
   });
 
-  const [bpm, steps, scores] = await Promise.all([getBpm(), getSteps(), getScores()]);
-  return { bpm, steps, sleepScore: scores.sleep, wellbeingScore: scores.wellbeing, raw: '' };
+  // Fetch all data in parallel
+  const [
+    bpm,
+    heartRateSleep,
+    hrv,
+    respiratoryRate,
+    oxygenSaturation,
+    vo2Max,
+    bloodPressureSystolic,
+    bloodPressureDiastolic,
+    steps,
+    floorsClimbed,
+    activeEnergyBurned,
+    totalEnergyBurned,
+    activeDuration,
+    exerciseTime,
+    weight,
+    height,
+    bmi,
+    bodyFat,
+    leanBodyMass,
+    sleepDuration,
+    sleepEfficiency,
+    sleepLatency,
+    sleepDeepDuration,
+    sleepRemDuration,
+    sleepLightDuration,
+    bodyTemperature,
+    scores,
+  ] = await Promise.all([
+    // Vitals
+    getBiomarker(SahhaBiomarkerType.heart_rate_resting, SahhaBiomarkerCategory.vitals, 'avg'),
+    getBiomarker(SahhaBiomarkerType.heart_rate_sleep, SahhaBiomarkerCategory.vitals, 'avg'),
+    getBiomarker(SahhaBiomarkerType.heart_rate_variability_sdnn, SahhaBiomarkerCategory.vitals, 'avg'),
+    getBiomarker(SahhaBiomarkerType.respiratory_rate, SahhaBiomarkerCategory.vitals, 'avg'),
+    getBiomarker(SahhaBiomarkerType.oxygen_saturation, SahhaBiomarkerCategory.vitals, 'avg'),
+    getBiomarker(SahhaBiomarkerType.vo2_max, SahhaBiomarkerCategory.vitals, 'last'),
+    getBiomarker(SahhaBiomarkerType.blood_pressure_systolic, SahhaBiomarkerCategory.vitals, 'avg'),
+    getBiomarker(SahhaBiomarkerType.blood_pressure_diastolic, SahhaBiomarkerCategory.vitals, 'avg'),
+    // Activity
+    getBiomarker(SahhaBiomarkerType.steps, SahhaBiomarkerCategory.activity, 'sum'),
+    getBiomarker(SahhaBiomarkerType.floors_climbed, SahhaBiomarkerCategory.activity, 'sum'),
+    getBiomarker(SahhaBiomarkerType.active_energy_burned, SahhaBiomarkerCategory.activity, 'sum'),
+    getBiomarker(SahhaBiomarkerType.total_energy_burned, SahhaBiomarkerCategory.activity, 'sum'),
+    getBiomarker(SahhaBiomarkerType.active_duration, SahhaBiomarkerCategory.activity, 'sum'),
+    getBiomarker(SahhaBiomarkerType.activity_high_intensity_duration, SahhaBiomarkerCategory.activity, 'sum'),
+    // Body
+    getBiomarker(SahhaBiomarkerType.weight, SahhaBiomarkerCategory.body, 'last'),
+    getBiomarker(SahhaBiomarkerType.height, SahhaBiomarkerCategory.body, 'last'),
+    getBiomarker(SahhaBiomarkerType.body_mass_index, SahhaBiomarkerCategory.body, 'last'),
+    getBiomarker(SahhaBiomarkerType.body_fat, SahhaBiomarkerCategory.body, 'last'),
+    getBiomarker(SahhaBiomarkerType.lean_mass, SahhaBiomarkerCategory.body, 'last'),
+    // Sleep
+    getBiomarker(SahhaBiomarkerType.sleep_duration, SahhaBiomarkerCategory.sleep, 'avg'),
+    getBiomarker(SahhaBiomarkerType.sleep_efficiency, SahhaBiomarkerCategory.sleep, 'avg'),
+    getBiomarker(SahhaBiomarkerType.sleep_latency, SahhaBiomarkerCategory.sleep, 'avg'),
+    getBiomarker(SahhaBiomarkerType.sleep_deep_duration, SahhaBiomarkerCategory.sleep, 'avg'),
+    getBiomarker(SahhaBiomarkerType.sleep_rem_duration, SahhaBiomarkerCategory.sleep, 'avg'),
+    getBiomarker(SahhaBiomarkerType.sleep_light_duration, SahhaBiomarkerCategory.sleep, 'avg'),
+    getBiomarker(SahhaBiomarkerType.body_temperature_basal, SahhaBiomarkerCategory.vitals, 'avg'),
+    // Scores
+    getScores(),
+  ]);
+
+  // Helper function to get value from biomarker or factor fallback
+  const getValue = (biomarkerValue: number | null, factorName: string, multiplier: number = 1): number | null => {
+    if (biomarkerValue !== null) return biomarkerValue;
+    const factorValue = scores.factors.get(factorName);
+    return factorValue !== null && factorValue !== undefined ? factorValue * multiplier : null;
+  };
+
+  // Sleep duration needs special handling - factors are in minutes, biomarkers can be unreliable
+  const getSleepDuration = () => {
+    // Factor value is in minutes according to Sahha API - USE THIS FIRST as it's more reliable
+    const factorValue = scores.factors.get('sleep_duration');
+    if (factorValue !== null && factorValue !== undefined) {
+      log(`[SAHHA][getSleepDuration] Using factor value: ${factorValue} minutes`);
+      // Validate reasonable sleep duration (2-20 hours)
+      if (factorValue >= 120 && factorValue <= 1200) {
+        return factorValue * 60; // Convert minutes to seconds
+      }
+      log(`[SAHHA][getSleepDuration] Factor value out of reasonable range, ignoring`);
+    }
+    
+    // Fallback to biomarker only if factor is not available
+    if (sleepDuration !== null) {
+      log(`[SAHHA][getSleepDuration] Biomarker value: ${sleepDuration}`);
+      // Maximum reasonable sleep: 16 hours = 57600 seconds
+      // Minimum reasonable sleep: 2 hours = 7200 seconds
+      if (sleepDuration >= 7200 && sleepDuration <= 57600) {
+        log(`[SAHHA][getSleepDuration] Biomarker value is reasonable (in seconds)`);
+        return sleepDuration; // Already in seconds
+      }
+      // If it's a small number, might be in minutes
+      if (sleepDuration >= 120 && sleepDuration <= 1200) {
+        log(`[SAHHA][getSleepDuration] Biomarker appears to be in minutes, converting`);
+        return sleepDuration * 60;
+      }
+      log(`[SAHHA][getSleepDuration] Biomarker value unreasonable (${sleepDuration}), ignoring`);
+    }
+    
+    return null;
+  };
+
+  // Helper to validate and use reasonable values only
+  const getValidValue = (value: number | null, min: number, max: number): number | null => {
+    if (value === null) return null;
+    if (value >= min && value <= max) return value;
+    log(`[SAHHA] Value ${value} out of range [${min}, ${max}], rejecting`);
+    return null;
+  };
+
+  return {
+    bpm: getValue(bpm, 'resting_heart_rate'),
+    heartRateSleep: getValue(heartRateSleep, 'heart_rate_sleep'),
+    hrv,
+    respiratoryRate,
+    oxygenSaturation,
+    vo2Max,
+    bloodPressureSystolic,
+    bloodPressureDiastolic,
+    steps: getValue(steps, 'steps'),
+    floorsClimbed,
+    activeEnergyBurned: getValue(activeEnergyBurned, 'active_calories'), // Sahha uses 'active_calories'
+    totalEnergyBurned,
+    activeDuration: getValue(activeDuration, 'active_hours', 3600), // Convert hours to seconds
+    exerciseTime,
+    weight,
+    height,
+    bmi,
+    bodyFat,
+    leanBodyMass,
+    sleepDuration: getSleepDuration(), // Handled specially with validation
+    sleepEfficiency: getValidValue(sleepEfficiency, 0, 100), // 0-100%
+    sleepLatency: getValidValue(sleepLatency, 0, 7200), // 0-2 hours in seconds
+    sleepDeepDuration: getValidValue(sleepDeepDuration, 0, 28800), // 0-8 hours in seconds
+    sleepRemDuration: getValidValue(sleepRemDuration, 0, 14400), // 0-4 hours in seconds
+    sleepLightDuration: getValidValue(sleepLightDuration, 0, 28800), // 0-8 hours in seconds
+    bodyTemperature,
+    sleepScore: scores.sleep,
+    wellbeingScore: scores.wellbeing,
+    activityScore: scores.activity,
+    readinessScore: scores.readiness,
+  };
 }
 
 export default { runSahhaMinimalTest };

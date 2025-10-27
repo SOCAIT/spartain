@@ -31,7 +31,16 @@ export const COLORS = {
 
     darkRed: "#410f8e",
     greenPrimary: "#4caf50",
-    placeholder: "#aaa"
+    placeholder: "#aaa",
+
+    // Additional colors for health dashboard
+    purple: "#9C27B0",
+    orange: "#FF9800",
+    teal: "#009688",
+    blue: "#2196F3",
+    lightBlue: "#03A9F4",
+    cyan: "#00BCD4",
+    darkBlue: "#1565C0",
 
 
 };

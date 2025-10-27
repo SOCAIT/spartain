@@ -90,5 +90,17 @@
 		<integer>1</integer>
 		<integer>2</integer>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- Replace with your iOS Client ID from Google Console (reversed) -->
+				<string>com.googleusercontent.apps.1027987981704-rnglrifqhtar7o53i0jcvaiila060mfb</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

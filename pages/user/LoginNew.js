@@ -12,7 +12,7 @@ import { COLORS, SIZES, FONTS } from "../../constants"
 import { useForm, Controller } from 'react-hook-form'
 import { save } from '../../helpers/Storage'
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// import SocialAuthentication from '../../components/authentication/SocialAuthentication';
+// import SocialAuthentication from '../../components/authentication/SocialAuthentication'; // DISABLED - Uncomment to enable Google/Apple Sign-In
 
 
 export default function SignInScreen({navigation}) {
@@ -193,11 +193,19 @@ export default function SignInScreen({navigation}) {
           </TouchableOpacity>
         </View>
 
-        {/* <View style={styles.socialContainer}>
-          <Icon name="instagram" size={30} color="#FFF" style={styles.socialIcon} />
-          <Icon name="facebook" size={30} color="#FFF" style={styles.socialIcon} />
-          <Icon name="linkedin" size={30} color="#FFF" style={styles.socialIcon} />
-        </View> */}
+        {/* GOOGLE/APPLE SIGN-IN - DISABLED FOR NOW */}
+        {/* Uncomment below to re-enable social authentication */}
+        {/*
+        <View style={styles.dividerContainer}>
+          <View style={styles.divider} />
+          <Text style={styles.dividerText}>OR</Text>
+          <View style={styles.divider} />
+        </View>
+
+        <View style={styles.socialContainer}>
+          <SocialAuthentication navigation={navigation} />
+        </View>
+        */}
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>Don't have an account? </Text>
@@ -284,10 +292,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginRight: 5,
   },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#666',
+  },
+  dividerText: {
+    color: '#999',
+    paddingHorizontal: 10,
+    fontSize: 14,
+  },
   socialContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginVertical: 20,
+    marginBottom: 20,
   },
   socialIcon: {
     marginHorizontal: 15,

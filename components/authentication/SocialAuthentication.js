@@ -1,206 +1,197 @@
 // React Native code for Google and Apple authentication
 
 import React, {useContext} from 'react';
-import { View, Button, Alert } from 'react-native';
-import { GoogleSignin, GoogleSigninButton,   statusCodes } from '@react-native-google-signin/google-signin';
+import { View, Alert, Platform } from 'react-native';
+import { GoogleSignin, GoogleSigninButton, statusCodes } from '@react-native-google-signin/google-signin';
 import appleAuth, { AppleButton } from '@invertase/react-native-apple-authentication';
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import {AuthContext} from "../../helpers/AuthContext"
-
-
-import {save,getValueFor} from '../../helpers/Storage'
-
-
 import { backend_url } from '../../config/config';
-const GOOGLE_ANDROID_CLIENT_ID_DEV = "1027987981704-rnglrifqhtar7o53i0jcvaiila060mfb.apps.googleusercontent.com"
-const GOOGLE_WEB_CLIENT_ID_DEV = "1027987981704-cnmne27tpad01j4fdhpcgpp6tpd5okfl.apps.googleusercontent.com"
+// Replace these with your actual Client IDs from Google Cloud Console
+const GOOGLE_WEB_CLIENT_ID_DEV = "807169666347-i8ve04ss9ru2hm11o60aif544igirqts.apps.googleusercontent.com"
+const GOOGLE_WEB_CLIENT_ID_RELEASE = "807169666347-e3b61fth7bjpfldkkmh0ddvqdvlf9qo0.apps.googleusercontent.com"
 
-const GOOGLE_WEB_CLIENT_ID_RELEASE ="807169666347-e3b61fth7bjpfldkkmh0ddvqdvlf9qo0.apps.googleusercontent.com"
-const GOOGLE_ANDROID_CLIENT_ID_RELEASE ="807169666347-gl1rd1qouc3qgs2fktvenl42d3snmsim.apps.googleusercontent.com"
-
-
-// if (__DEV__){
-//   GoogleSignin.configure({
-//     webClientId:  GOOGLE_WEB_CLIENT_ID_DEV  ,
-//     androidClientId: GOOGLE_ANDROID_CLIENT_ID_DEV,
-//     //iosClientId: GOOGLE_IOS_CLIENT_ID,
-//     scopes: ['profile', 'email'],
-//   });
-// }
-// else {
-//   GoogleSignin.configure({
-//     webClientId:  GOOGLE_WEB_CLIENT_ID_RELEASE ,
-//     androidClientId: GOOGLE_ANDROID_CLIENT_ID_RELEASE,
-//     //iosClientId: GOOGLE_IOS_CLIENT_ID,
-//     scopes: ['profile', 'email'],
-//   });
-// }
+// Configure Google Sign-In
 GoogleSignin.configure({
-  webClientId:  GOOGLE_WEB_CLIENT_ID_DEV  ,
-  androidClientId: GOOGLE_ANDROID_CLIENT_ID_DEV,
-  //iosClientId: GOOGLE_IOS_CLIENT_ID,
+  webClientId: __DEV__ ? GOOGLE_WEB_CLIENT_ID_DEV : GOOGLE_WEB_CLIENT_ID_RELEASE,
+  offlineAccess: true,
   scopes: ['profile', 'email'],
 });
-
-import axios from 'axios';
 const SocialAuthentication = ({navigation}) => {
 
   const {setAuthState} = useContext(AuthContext)
 
-  const checkPlayServices = async () => {
-    try {
-      // Check if Play Services are available
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      Alert.alert('Play Services Available', 'Google Play Services are available and up to date.');
-      console.log('Google Play Services are available.');
-    } catch (error) {
-      if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        // Play Services not available or outdated
-        Alert.alert('Error', 'Google Play Services are not available or outdated.');
-        console.log('Play Services not available or outdated:', error.message);
-      } else {
-        // Some other error
-        Alert.alert('Error', 'An unknown error occurred while checking Play Services.');
-        console.log('Unknown error while checking Play Services:', error.message);
-      }
-    }
-  };
-
-  const logged_in = (response) => {
-      //deleteItemAsync("access-token")
-      save("accessToken", response.data.access_token)
-      // auth({token: response.data.access})
-      //setAuthState({username:response.data.username,id: response.data.id,status:true,
-       // profile_photo: response.data.profile_photo});
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Tabs' }]
-      })
-  }
-
   const handleGoogleSignIn = async () => {
     try {
-      // Alert.alert("socia 1")
-
-      //const hasPlayServices = await GoogleSignin.hasPlayServices();
-
-      checkPlayServices()
-
-      // Alert.alert("socia 2")
-
-      const userInfo = await GoogleSignin.signIn();
-
-      Alert.alert("socail 3")
-
-      console.log(userInfo)
-      console.log(backend_url)
-      idToken = userInfo.idToken
-
-      // Alert.alert(idToken)
-
-      axios.get(backend_url +"test/").then((response) => {
-        console.log(response.data)
-
-      })
-  
-      axios.post(backend_url +"user/google_auth/", {code: idToken}).then((response) => {
-        console.log(response.data)
-        Alert.alert("sucess")
-        setAuthState({username:response.data.user.username, id: response.data.user.id,status:true,})
-        
-        logged_in(response)
-
-      })
-
-      // send to back for validation
-
-      // let resp = await axios({
-      //   method: 'get',
-      //   url: `https://www.googleapis.com/oauth2/v3/tokeninfo?id_token=${idToken}`,
-      //   withCredentials: true,
-      // });
-
-      // console.log(resp.data) 
-
-      // Send userInfo.idToken to your backend
-      Alert.alert('Success', 'Google authentication successful');
-    } catch (error){
-      Alert.alert('Error', `Google Sign-In failed: ${error.message}`);
-    //   if (isErrorWithCode(error)) {
-    //     switch (error.code) {
-    //       case statusCodes.IN_PROGRESS:
-    //         // operation (eg. sign in) already in progress
-    //         Alert.alert("already in progress")
-    //         break;
-    //       case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-    //         Alert.alert("play services not available or outdated")
-    //         // Android only, play services not available or outdated
-    //         break;
-    //       default:
-    //         // some other error happened
-    //         Alert.alert("other error")
-    //     }
-    // }  else {
-    //   console.error('Google authentication error:', error);
-    //   Alert.alert('Error', 'Google authentication failed');
-    // }
-  }
-  };
-
-  // Somewhere in your code
-_signIn = async () => {
-  try {
-    await GoogleSignin.hasPlayServices();
-    const userInfo = await GoogleSignin.signIn();
-    setState({ userInfo, error: undefined });
-  } catch (error) {
-    if (isErrorWithCode(error)) {
-      switch (error.code) {
-        case statusCodes.SIGN_IN_CANCELLED:
-          // user cancelled the login flow
-          break;
-        case statusCodes.IN_PROGRESS:
-          // operation (eg. sign in) already in progress
-          break;
-        case statusCodes.PLAY_SERVICES_NOT_AVAILABLE:
-          // play services not available or outdated
-          break;
-        default:
-        // some other error happened
+      // Check if Play Services are available (Android only)
+      if (Platform.OS === 'android') {
+        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       }
-    } else {
-      // an error that's not related to google sign in occurred
+
+      // Sign in with Google
+      const userInfo = await GoogleSignin.signIn();
+      console.log('Google Sign-In successful:', userInfo);
+
+      const idToken = userInfo.idToken;
+
+      if (!idToken) {
+        Alert.alert('Error', 'Failed to get authentication token from Google');
+        return;
+      }
+
+      // Send idToken to your backend for verification
+      const response = await axios.post(backend_url + "user/google_auth/", {
+        code: idToken
+      });
+
+      console.log('Backend response:', response.data);
+
+      if (response.data.access_token) {
+        // Save the access token
+        await AsyncStorage.setItem('token', response.data.access_token);
+        
+        // Set axios default header
+        axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
+
+        // Update auth state
+        setAuthState({
+          token: response.data.access_token,
+          authenticated: true,
+          user: response.data.user,
+          username: response.data.user.username,
+          id: response.data.user.id,
+          status: true,
+        });
+
+        // Check onboarding status
+        const onboardKey = `hasOnboarded_${response.data.user.username}`;
+        const alreadyOnboarded = await AsyncStorage.getItem(onboardKey);
+
+        if (alreadyOnboarded) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Tabs' }]
+          });
+        } else {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Onboarding', params: { username: response.data.user.username } }]
+          });
+        }
+
+        Alert.alert('Success', 'Signed in with Google successfully!');
+      } else {
+        Alert.alert('Error', 'Failed to authenticate with backend');
+      }
+
+    } catch (error) {
+      console.error('Google Sign-In error:', error);
+      
+      // Handle specific error codes
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // User cancelled the sign-in
+        console.log('User cancelled Google Sign-In');
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        Alert.alert('Error', 'Sign-In already in progress');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert('Error', 'Google Play Services not available or outdated');
+      } else {
+        Alert.alert('Error', `Google Sign-In failed: ${error.message || 'Unknown error'}`);
+      }
     }
-  }
-};
+  };
 
   const handleAppleSignIn = async () => {
     try {
-      const credential = await appleAuth.performRequest({
+      // Perform Apple Sign-In
+      const appleAuthRequestResponse = await appleAuth.performRequest({
         requestedOperation: appleAuth.Operation.LOGIN,
+        requestedScopes: [appleAuth.Scope.EMAIL, appleAuth.Scope.FULL_NAME],
       });
-      // Send credential.identityToken to your backend
-      Alert.alert('Success', 'Apple authentication successful');
+
+      const { identityToken, email, fullName } = appleAuthRequestResponse;
+
+      if (!identityToken) {
+        Alert.alert('Error', 'Failed to get authentication token from Apple');
+        return;
+      }
+
+      // Send identityToken to your backend
+      const response = await axios.post(backend_url + "user/apple_auth/", {
+        code: identityToken,
+        email: email,
+        fullName: fullName
+      });
+
+      console.log('Backend response:', response.data);
+
+      if (response.data.access_token) {
+        // Save the access token
+        await AsyncStorage.setItem('token', response.data.access_token);
+        
+        // Set axios default header
+        axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
+
+        // Update auth state
+        setAuthState({
+          token: response.data.access_token,
+          authenticated: true,
+          user: response.data.user,
+          username: response.data.user.username,
+          id: response.data.user.id,
+          status: true,
+        });
+
+        // Check onboarding status
+        const onboardKey = `hasOnboarded_${response.data.user.username}`;
+        const alreadyOnboarded = await AsyncStorage.getItem(onboardKey);
+
+        if (alreadyOnboarded) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Tabs' }]
+          });
+        } else {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Onboarding', params: { username: response.data.user.username } }]
+          });
+        }
+
+        Alert.alert('Success', 'Signed in with Apple successfully!');
+      } else {
+        Alert.alert('Error', 'Failed to authenticate with backend');
+      }
+
     } catch (error) {
-      console.error('Apple authentication error:', error);
-      Alert.alert('Error', 'Apple authentication failed');
+      console.error('Apple Sign-In error:', error);
+      
+      if (error.code === appleAuth.Error.CANCELED) {
+        console.log('User cancelled Apple Sign-In');
+      } else {
+        Alert.alert('Error', `Apple Sign-In failed: ${error.message || 'Unknown error'}`);
+      }
     }
   };
 
   return (
-    <View style={{flexDirection: 'row'}}>
+    <View style={{flexDirection: 'row', justifyContent: 'center', alignItems: 'center'}}>
       <GoogleSigninButton
-        style={{ width: 150, height: 70, }}
+        style={{ width: 150, height: 60 }}
         size={GoogleSigninButton.Size.Wide}
         color={GoogleSigninButton.Color.Light}
         onPress={handleGoogleSignIn}
       />
-      <AppleButton
-        style={{ width: 150, height: 60, marginLeft:20, marginTop:5 }}
-        buttonStyle={AppleButton.Style.BLACK}
-        buttonType={AppleButton.Type.SIGN_IN}
-        onPress={handleAppleSignIn}
-      />
+      {Platform.OS === 'ios' && (
+        <AppleButton
+          style={{ width: 150, height: 60, marginLeft: 20 }}
+          buttonStyle={AppleButton.Style.WHITE}
+          buttonType={AppleButton.Type.SIGN_IN}
+          onPress={handleAppleSignIn}
+        />
+      )}
     </View>
   );
 };

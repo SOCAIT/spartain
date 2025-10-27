@@ -18,7 +18,7 @@ const BodyMeasurements = ({navigation}) => {
     // { value: `${height} cm`, label: "Height", backgroundColor: '#6A1B9A', iconName: "straighten", iconType: "Material" },
     { value: `Edit Info`, label: "Update your info (age, target goal, activity level)", backgroundColor: COLORS.lightDark, iconName: "edit", iconType: "Material", onPress: () => navigation.navigate("EditProfile", { authState }) },
     // { value: `Fitness Analysis`, label: "View your fitness analysis", backgroundColor: COLORS.lightDark, iconName: "analytics", iconType: "Material", onPress: () => navigation.navigate("HealthKitDashboard") },
-
+    // { value: `Fitness Analysis`, label: "View your fitness analysis", backgroundColor: COLORS.lightDark, iconName: "analytics", iconType: "Material", onPress: () => navigation.navigate("UserReport", {user: user}) },
 
    
   ];

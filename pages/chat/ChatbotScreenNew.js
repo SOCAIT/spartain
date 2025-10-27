@@ -1,30 +1,24 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   FlatList,
   StyleSheet,
-  Modal,
   Platform,
-  ScrollView,
-  Animated,
   Alert,
   KeyboardAvoidingView,
-  Image,
-  Linking,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import Icon from 'react-native-vector-icons/FontAwesome';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { COLORS } from '../../constants';
 import { useNavigation } from '@react-navigation/native';
-import { backend_url, agent_url } from '../../config/config';
+import { agent_url } from '../../config/config';
 import { AuthContext } from '../../helpers/AuthContext';
-// import { useSubscription } from '../../hooks/useSubscription';
 import { useSubscriptionRevenueCat } from '../../hooks/useSubscription.revenuecat';
 import SubscriptionModal from '../../components/SubscriptionModal';
+import ChatHeader from '../../components/chatbot/ChatHeader';
+import ChatMessage from '../../components/chatbot/ChatMessage';
+import ChatActionTabs from '../../components/chatbot/ChatActionTabs';
+import ChatInput from '../../components/chatbot/ChatInput';
+import PromptModal from '../../components/chatbot/PromptModal';
+import LargeInputModal from '../../components/chatbot/LargeInputModal';
 
  
 export default function ChatScreen() {
@@ -33,12 +27,23 @@ export default function ChatScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const [isPromptModalVisible, setIsPromptModalVisible] = useState(false);
   const [isLargeModalVisible, setIsLargeModalVisible] = useState(false);
-  const [inputHeight, setInputHeight] = useState(40);
-  const {authState} = useContext(AuthContext);
-  const { checkSubscription, showSubscriptionModal, setShowSubscriptionModal, handleSubscribe } = useSubscriptionRevenueCat();
+  const { authState } = useContext(AuthContext);
+  const { checkSubscription, showSubscriptionModal, setShowSubscriptionModal } = useSubscriptionRevenueCat();
   const flatListRef = useRef(null);
-  const spinValue = useRef(new Animated.Value(0)).current;
-  const [thinkingText, setThinkingText] = useState('�� AI is thinking');
+  const [thinkingText, setThinkingText] = useState('🤖 AI is thinking');
+  const [conversationId, setConversationId] = useState('');
+
+  // Generate unique conversation ID on mount
+  useEffect(() => {
+    const generateConversationId = () => {
+      const timestamp = Date.now();
+      const random = Math.random().toString(36).substring(2, 15);
+      return `conv_${timestamp}_${random}`;
+    };
+    const newId = generateConversationId();
+    setConversationId(newId);
+    console.log('Conversation started with ID:', newId);
+  }, []);
 
   const [messages, setMessages] = useState([
     {
@@ -50,16 +55,6 @@ export default function ChatScreen() {
   ]);
 
   const navigation = useNavigation();
-
-  const MIN_HEIGHT = 40;
-  const MAX_HEIGHT = 200;
-
-  const prompts = [
-    "Tell me about a workout plan.",
-    "How can I lose weight?",
-    "Give me tips for muscle gain.",
-    "What should I eat for energy?",
-  ];
 
   // ─────────────────────────── helpers
 const JOB_POLL_INTERVAL = 3000;          // 3-second polling
@@ -197,6 +192,12 @@ useEffect(() => {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   };
 
+  const generateConversationId = () => {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 15);
+    return `conv_${timestamp}_${random}`;
+  };
+
   const sendMessage = async () => {
     if (inputText.trim().length === 0) return;
     const hasSubscription = await checkSubscription('ai_agent');
@@ -243,6 +244,7 @@ useEffect(() => {
           user_input: userMsg.text,
           context: conversationContext,
           auth_state: authState,
+          conversation_id: conversationId,
         }),
       );
     };
@@ -421,9 +423,9 @@ useEffect(() => {
     if (isTyping) {
       let dotCount = 0;
       interval = setInterval(() => {
-        dotCount = (dotCount + 1) % 4; // cycles through 0-3 dots
+        dotCount = (dotCount + 1) % 4;
         setThinkingText(`🤖 SyntraFit Hermes is thinking${'.'.repeat(dotCount)}`);
-      }, 500); // update every 0.5s for smoother animation
+      }, 500);
     } else {
       setThinkingText('🤖 SyntraFit Hermes is thinking');
     }
@@ -433,117 +435,9 @@ useEffect(() => {
     };
   }, [isTyping]);
 
-  const spin = spinValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg']
-  });
-
-  const renderItem = ({ item }) => {
-    const rawText = !item.isUser && (!item.text || item.text.trim() === '')
-      ? thinkingText
-      : item.text;
-
-    // Remove any leading 'AI:' or 'User:' markers that backend may send
-    const displayText = rawText.replace(/^\s*(AI|User):\s*/i, '');
-
-    // Format text with markdown-style formatting for AI responses
-    const formatText = (text) => {
-      if (item.isUser) {
-        return <Text style={styles.messageText}>{text}</Text>;
-      }
-
-      // Split text by bold, headers, and URLs
-      const urlRegex = /(https?:\/\/[^\s]+)/g;
-      const combinedRegex = /(\*\*.*?\*\*|###.*?|https?:\/\/[^\s]+)/g;
-      const parts = text.split(combinedRegex).filter(Boolean);
-      
-      return (
-        <Text style={styles.messageText}>
-          {parts.map((part, index) => {
-            // Bold text: **text**
-            if (part.startsWith('**') && part.endsWith('**')) {
-              const boldText = part.slice(2, -2);
-              return (
-                <Text key={index} style={styles.boldText}>
-                  {boldText}
-                </Text>
-              );
-            }
-            // Headers: ### text
-            else if (part.startsWith('###')) {
-              const headerText = part.slice(3).trim();
-              return (
-                <Text key={index} style={styles.headerText}>
-                  {'\n'}{headerText}{'\n'}
-                </Text>
-              );
-            }
-            // URLs
-            else if (urlRegex.test(part)) {
-              return (
-                <Text
-                  key={index}
-                  style={styles.linkText}
-                  onPress={() => Linking.openURL(part)}
-                >
-                  {part}
-                </Text>
-              );
-            }
-            // Regular text
-            else {
-              return <Text key={index}>{part}</Text>;
-            }
-          })}
-        </Text>
-      );
-    };
-
-    const addNutrition = async (data) => {
-      if (!data) return;
-      try {
-        const today = new Date().toISOString().split('T')[0];
-        const stored = await AsyncStorage.getItem('@currentNutrition');
-        let base = { calories:0, carbs:0, proteins:0, fats:0 };
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed.date === today) base = parsed.nutrition;
-        }
-        const updated = {
-          calories: base.calories + (parseFloat(data.calories)||0),
-          carbs: base.carbs + (parseFloat(data.carbs)||0),
-          proteins: base.proteins + (parseFloat(data.protein||data.proteins)||0),
-          fats: base.fats + (parseFloat(data.fat||data.fats)||0),
-        };
-        await AsyncStorage.setItem('@currentNutrition', JSON.stringify({date:today, nutrition:updated}));
-        Alert.alert('Added', 'Nutrition info added to today\'s diary');
-      } catch(err){
-        Alert.alert('Error', 'Could not save nutrition info');
-      }
-    };
-
-    return (
-    <View style={[styles.messageContainer, item.isUser ? styles.userMessage : styles.botMessage]}>
-        {formatText(displayText)}
-        {item.nutritionData && item.timestamp && (
-          <TouchableOpacity style={styles.nutriButton} onPress={() => addNutrition(item.nutritionData)}>
-            <Text style={styles.nutriButtonText}>Add to Daily Nutrition Info</Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.timestamp}>{item.timestamp}</Text>
-        {item.isUser ? (
-          <MaterialIcons name="person" size={20} color="#FF6A00" style={styles.userIcon} />
-        ) : (
-          <Image source={require('../../assets/icons/spartan_logo.png')} style={styles.botIcon} />
-        )}
-      </View>
-    );
-  };
-
-  const handleContentSizeChange = (event) => {
-    const height = event.nativeEvent.contentSize.height;
-    setInputHeight(Math.min(Math.max(height, MIN_HEIGHT), MAX_HEIGHT));
-  };
+  const renderItem = ({ item }) => (
+    <ChatMessage item={item} thinkingText={thinkingText} />
+  );
 
   const clearConversation = () => {
     Alert.alert(
@@ -557,6 +451,11 @@ useEffect(() => {
         {
           text: "Clear",
           onPress: () => {
+            // Generate new conversation ID for the new chat
+            const newConversationId = generateConversationId();
+            setConversationId(newConversationId);
+            console.log('New conversation started with ID:', newConversationId);
+            
             setMessages([
               {
                 id: generateUniqueId(),
@@ -608,25 +507,11 @@ useEffect(() => {
       style={styles.container}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>SyntraFit.AI</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity 
-            onPress={clearConversation}
-            style={styles.clearButton}
-          >
-            <MaterialIcons name="delete-sweep" size={20} color="#FFF" />
-            <Text style={styles.clearButtonText}>Clear</Text>
-          </TouchableOpacity>
-          <Text style={styles.chatsLeft}>Advanced Actions</Text>
-          <TouchableOpacity onPress={() => setIsPromptModalVisible(true)}>
-            <MaterialIcons name="more-vert" size={24} color="#FFF" />
-          </TouchableOpacity>
-        </View>
-      </View> 
+      <ChatHeader 
+        onClear={clearConversation}
+        onShowPrompts={() => setIsPromptModalVisible(true)}
+      />
 
-      {/* Messages */}
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -637,132 +522,29 @@ useEffect(() => {
         onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
       />
 
-      {/* {isTyping && (
-        <View style={styles.typingIndicator}>
-          <Text style={styles.typingText}>AI coach is typing...</Text>
-          <Animated.View style={{ transform: [{ rotate: spin }] }}>
-            <MaterialIcons name="autorenew" size={16} color="#FF6A00" style={styles.typingIcon} />
-          </Animated.View>
-        </View>
-      )} */}
+      <ChatActionTabs onActionPress={handleActionTabPress} />
 
-      {/* Action Tabs */}
-      <View style={styles.tabsContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <TouchableOpacity
-            style={styles.tab}
-            onPress={() => handleActionTabPress('AIWorkoutPlan')}
-          >
-            <Text style={styles.tabText}>Create Workout Plan</Text>
-          </TouchableOpacity>
-          {/* <TouchableOpacity
-            style={styles.tab}
-            onPress={() => handleActionTabPress('BodyAnalyzer')}
-          >
-            <Text style={styles.tabText}>Analyze Body Composition</Text>
-          </TouchableOpacity> */}
+      <ChatInput
+        value={inputText}
+        onChangeText={setInputText}
+        onSend={sendMessage}
+        onExpand={() => setIsLargeModalVisible(true)}
+      />
 
-          <TouchableOpacity
-            style={styles.tab}
-            onPress={() => handleActionTabPress('AINutritionPlan')}
-          >
-            <Text style={styles.tabText}>Create Nutrition Plan</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-
-      {/* Input Container */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={[styles.input, { height: Math.max(inputHeight, MIN_HEIGHT) }]}
-          placeholder="Type to start chatting..."
-          placeholderTextColor="#888"
-          value={inputText}
-          onChangeText={setInputText}
-          multiline
-          onContentSizeChange={handleContentSizeChange}
-        />
-        <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-          <MaterialIcons name="send" size={24} color="#FFF" />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.expandButton} onPress={() => setIsLargeModalVisible(true)}>
-          <MaterialIcons name="fullscreen" size={24} color="#FFF" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Modal for Prompt Options */}
-      <Modal
+      <PromptModal
         visible={isPromptModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setIsPromptModalVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPressOut={() => setIsPromptModalVisible(false)}
-        >
-          <View style={styles.modalContent}>
-            {prompts.map((prompt, index) => (
-              <TouchableOpacity
-                key={index}
-                style={styles.promptOption}
-                onPress={() => {
-                  setInputText(prompt);
-                  setIsPromptModalVisible(false);
-                }}
-              >
-                <Text style={styles.promptText}>{prompt}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        onClose={() => setIsPromptModalVisible(false)}
+        onSelectPrompt={setInputText}
+      />
 
-      {/* Modal for Large Input Text */}
-      <Modal
+      <LargeInputModal
         visible={isLargeModalVisible}
-        animationType="slide"
-        onRequestClose={() => setIsLargeModalVisible(false)}
-      >
-        <View style={styles.largeModalContainer}>
-          <View style={styles.largeModalHeader}>
-            <TouchableOpacity
-              style={styles.largeModalCloseButton}
-              onPress={() => setIsLargeModalVisible(false)}
-            >
-              <MaterialIcons name="close" size={24} color="#FFF" />
-            </TouchableOpacity>
-            <Text style={styles.largeModalTitle}>Write Message</Text>
-            <TouchableOpacity
-              style={styles.largeModalSendButton}
-              onPress={() => {
-                sendMessage();
-                setIsLargeModalVisible(false);
-              }}
-            >
-              <MaterialIcons name="send" size={24} color="#FFF" />
-            </TouchableOpacity>
-          </View>
-          <TextInput
-            style={styles.largeModalInput}
-            placeholder="Type your message here..."
-            placeholderTextColor="#888"
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-            textAlignVertical="top"
-            autoFocus
-          />
-          <View style={styles.largeModalFooter}>
-            <Text style={styles.largeModalHint}>
-              Press send or swipe down to close
-            </Text>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setIsLargeModalVisible(false)}
+        value={inputText}
+        onChangeText={setInputText}
+        onSend={sendMessage}
+      />
 
-      {/* Add Subscription Modal */}
       <SubscriptionModal
         visible={showSubscriptionModal}
         onClose={() => setShowSubscriptionModal(false)}
@@ -777,244 +559,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#1C1C1E',
     paddingTop: Platform.OS === 'ios' ? 35 : 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
-    backgroundColor: COLORS.dark,
-  },
-  headerTitle: {
-    color: '#FFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  clearButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FF4136',
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    borderRadius: 15,
-    marginRight: 10,
-  },
-  clearButtonText: {
-    color: '#FFF',
-    fontSize: 12,
-    marginLeft: 3,
-  },
-  chatsLeft: {
-    color: '#FFF',
-    fontSize: 12,
-    marginRight: 10,
+    // paddingHorizontal: Platform.OS === 'ios' ? 20 : 16,
   },
   messageList: {
-    paddingHorizontal: Platform.OS === 'ios' ? 35 : 20,
+    paddingHorizontal: Platform.OS === 'ios' ? 20 : 16,
     flex: 1,
-  },
-  messageContainer: {
-    marginVertical: 8,
-    padding: 12,
-    borderRadius: 10,
-    maxWidth: '80%',
-  },
-  userMessage: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#FF6A00',
-  },
-  botMessage: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#333',
-  },
-  messageText: {
-    color: '#FFF',
-    fontSize: 14,
-  },
-  boldText: {
-    fontWeight: 'bold',
-  },
-  headerText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FF6A00',
-    marginTop: 10,
-    marginBottom: 5,
-  },
-  timestamp: {
-    color: '#fff',
-    fontSize: 10,
-    marginTop: 5,
-    textAlign: 'right',
-  },
-  userIcon: {
-    position: 'absolute',
-    top: 10,
-    right: -30,
-  },
-  botIcon: {
-    position: 'absolute',
-    top: 10,
-    left: -30,
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-  },
-  typingIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-  },
-  typingText: {
-    color: '#FFF',
-    marginRight: 5,
-  },
-  typingIcon: {
-    marginLeft: 5,
-  },
-  tabsContainer: {
-    backgroundColor: COLORS.dark,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    paddingTop: 10,
-    borderTopRightRadius: 20,
-    borderTopLeftRadius: 20,
-    shadowColor: '#000',
-  
-    shadowOpacity: 0.99,
-    shadowRadius: 10,
-  },
-  tab: {
-    marginHorizontal: 5,
-    backgroundColor: '#444',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-  },
-  tabText: {
-    color: '#FFF',
-    fontSize: 12,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    padding: Platform.OS === 'ios' ? 10 : 10,
-    backgroundColor: COLORS.dark,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.dark,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 10,
-  },
-  input: {
-    flex: 1,
-    color: '#FFF',
-    paddingHorizontal: 10,
-    backgroundColor: '#1C1C1E',
-    borderRadius: 20,
-    padding: Platform.OS === 'ios' ? 15 : 10,
-  },
-  sendButton: {
-    marginLeft: 10,
-    backgroundColor: '#FF6A00',
-    borderRadius: 50,
-    padding: 10,
-  },
-  expandButton: {
-    marginLeft: 10,
-    backgroundColor: '#555',
-    borderRadius: 50,
-    padding: 10,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: '#333',
-    padding: 20,
-    borderRadius: 10,
-    width: '80%',
-  },
-  promptOption: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#555',
-  },
-  promptText: {
-    color: '#FFF',
-    fontSize: 14,
-  },
-  largeModalContainer: {
-    flex: 1,
-    backgroundColor: '#1C1C1E',
-  },
-  largeModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: COLORS.dark,
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-    paddingTop: Platform.OS === 'ios' ? 50 : 12,
-  },
-  largeModalTitle: {
-    color: '#FFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  largeModalCloseButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#333',
-  },
-  largeModalSendButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#FF6A00',
-  },
-  largeModalInput: {
-    flex: 1,
-    color: '#FFF',
-    backgroundColor: '#1C1C1E',
-    padding: 16,
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  largeModalFooter: {
-    padding: 16,
-    backgroundColor: COLORS.dark,
-    borderTopWidth: 1,
-    borderTopColor: '#333',
-  },
-  largeModalHint: {
-    color: '#888',
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  linkText: {
-    color: '#4DA6FF',
-    textDecorationLine: 'underline',
-  },
-  nutriButton:{
-    marginTop:6,
-    alignSelf:'flex-start',
-    backgroundColor:COLORS.darkOrange,
-    paddingVertical:4,
-    paddingHorizontal:8,
-    borderRadius:6,
-  },
-  nutriButtonText:{
-    color:'#fff',
-    fontSize:12,
   },
 });

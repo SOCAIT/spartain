@@ -18,6 +18,7 @@ import CustomProgressChart from '../../components/charts/CustomProgressChart';
 // import DataCollectionTest from '../../components/DataCollectionTest';
 import { useScreenTracking } from '../../hooks/useDataCollection';
 import HealthKitDashboard from './HealthKitDashboard';
+import UserProfileCard from '../../components/UserProfileCard';
 
 const USER= {
    "username": "Lelouch",
@@ -116,7 +117,10 @@ export default function MainScreen({navigation}) {
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.greetingText}> {authState.username}</Text>
+        {/* <View>
+          <Text style={styles.greetingText}>Hello, {authState.username}!</Text>
+          <Text style={styles.dateText}>{currentDate}</Text>
+        </View> */}
 
         {/* TODO: add notification container */}
         {/* <View style={styles.notificationContainer}>
@@ -127,52 +131,8 @@ export default function MainScreen({navigation}) {
         </View> */}
       </View>
 
-      {/* User Info */}
-      <TouchableOpacity 
-        style={styles.userInfo} 
-        onPress={() => {
-          navigation.navigate("EditProfile", { authState });
-        }}
-      >
-        <View style={styles.profileImageContainer}>
-          {authState.profile_photo ? (
-            <Image
-              source={{ uri: authState.profile_photo }}
-              style={styles.profileImage}
-            />
-          ) : (
-            <View style={styles.placeholderContainer}>
-              <MaterialIcons name="person" size={40} color="#FF6A00" />
-            </View>
-          )}
-        </View>
-        <View style={styles.userDetails}>
-          <View style={styles.statusContainer}>
-            <View style={styles.detailRow}>
-              <MaterialIcons name="fitness-center" size={16} color="#FF6A00" />
-              <Text style={styles.statusText}>Weight: {authState.latest_body_measurement?.weight_kg || 'N/A'} kg</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <MaterialIcons name="flag" size={16} color="#FF6A00" />
-              <Text style={styles.statusText}>Goal: {authState.user_target === 'FL' ? 'Fat Loss' : authState.user_target === 'MG' ? 'Muscle Gain' : authState.user_target === 'WL' ? 'Weight Loss' : authState.user_target === 'ST' ? 'Strength Training' : authState.user_target === 'EN' ? 'Endurance' : 'N/A'}</Text>
-            </View>
-            <View style={styles.detailRow}>
-              <MaterialIcons name="person" size={16} color="#FF6A00" />
-              <Text style={styles.statusText}>Gender: {authState.gender === 'M' ? 'Male' : authState.gender === 'F' ? 'Female' : authState.gender === 'O' ? 'Other' : 'N/A'}</Text>
-            </View>
-            <View style={styles.subscriptionContainer}>
-              <View style={styles.subscriptionBadge}>
-                <MaterialIcons name="star" size={14} color="#FFF" style={styles.subscriptionIcon} />
-                <Text style={styles.subscriptionText}>Premium</Text>
-              </View>
-              <TouchableOpacity>
-                <MaterialIcons name="edit" size={24} color="#FFF"/>
-              </TouchableOpacity>
-            </View>
-          </View>
-          
-        </View>
-      </TouchableOpacity>
+      {/* User Profile Card Component */}
+      <UserProfileCard authState={authState} navigation={navigation} />
 
       {/* Body Measurements */}
       <SectionHeader title={"User Info"} childComponent={<BodyMeasurements navigation={navigation} />} /> {/*  */}
@@ -224,16 +184,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 20,
-    padding: 10,
-    backgroundColor: '#2C2C2E',
-
-    paddingHorizontal: 15,
+    marginBottom: 20,
+    paddingHorizontal: 16,
   },
   dateContainer: {}, 
   dateText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '500',
+    color: '#999',
+    fontSize: 13,
+    fontWeight: '400',
+    marginTop: 4,
   },
   notificationContainer: {
     position: 'relative',
@@ -250,82 +209,9 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 12,
   },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    backgroundColor: '#2C2C2E',
-    padding: 12,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-  },
-  profileImageContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    overflow: 'hidden',
-    backgroundColor: '#2C2C2E',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#FF6A00',
-  },
-  profileImage: {
-    width: '100%',
-    height: '100%',
-  },
-  placeholderContainer: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#2C2C2E',
-  },
-  userDetails: {
-    marginLeft: 15,
-    flex: 1,
-  },
   greetingText: {
     color: '#FFF',
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-  statusContainer: {
-    marginTop: 10,
-    backgroundColor: '#2C2C2E',
-    padding: 12,
-    borderRadius: 12,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  statusText: {
-    color: '#FFF',
-    fontSize: 14,
-    marginLeft: 8,
-  },
-  subscriptionContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  subscriptionBadge: {
-    backgroundColor: '#FF6A00',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  subscriptionIcon: {
-    marginRight: 4,
-  },
-  subscriptionText: {
-    color: '#FFF',
-    fontSize: 12,
+    fontSize: 24,
     fontWeight: 'bold',
   },
   sectionContainer: {

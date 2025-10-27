@@ -13,24 +13,25 @@ export const InputDropdown = ({placeholder_value, items, onValueChange, selected
     const placeholder = {
       label: placeholder_value,
       value: null,
-      color: '#9EA0A4',
+      color: '#999',
     };
    
     
     return (
-     <View style={styles.view}>
+     <View style={styles.container}>
       <RNPickerSelect
         value={selectedValue}
         onValueChange={onValueChange}
         placeholder={placeholder}
-        style={styles}
+        style={{
+          inputIOS: styles.inputIOS,
+          inputAndroid: styles.inputAndroid,
+          placeholder: styles.placeholder,
+          iconContainer: styles.iconContainerInner,
+        }}
         useNativeAndroidPickerStyle={false}
         Icon={() => {
-          return   (
-           <View style={{alignItems:'center', justifyContent:'center'}}>
-          <MaterialIcons name="expand-more" size={30} color="#FF6A00" style={{marginTop:5}} />
-          </View>
-        )
+          return <MaterialIcons name="arrow-drop-down" size={28} color="#FF6A00" />
         }}
         items={items} 
       />
@@ -39,31 +40,39 @@ export const InputDropdown = ({placeholder_value, items, onValueChange, selected
   };
 
 const styles = StyleSheet.create({
-  view: {
-     alignItems: 'center'
+  container: {
+    backgroundColor: '#1C1C1E',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#3C3C3E',
   },
-
   inputIOS: {
-    fontSize: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    //borderWidth: 1,
-    alignItems: 'center',
-    //borderColor: 'gray',
-    borderRadius: 4,
-    backgroundColor: COLORS.lightDark,
-    color: 'white',
-    paddingRight: 30, // to ensure the text is never behind the icon
+    fontSize: 15,
+    paddingVertical: 14,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+    color: '#FFF',
+    paddingRight: 45,
+    fontWeight: '500',
   },
-
   inputAndroid: {
-    fontSize: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderWidth: 0.5,
-    borderColor: 'purple',
-    borderRadius: 8,
-    color: 'black',
-    paddingRight: 30, // to ensure the text is never behind the icon
+    fontSize: 15,
+    paddingVertical: 14,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
+    color: '#FFF',
+    paddingRight: 45,
+    fontWeight: '500',
+  },
+  placeholder: {
+    color: '#999',
+    fontSize: 15,
+    fontWeight: '400',
+  },
+  iconContainerInner: {
+    top: Platform.OS === 'ios' ? 14 : 16,
+    right: 15,
   },
 });
