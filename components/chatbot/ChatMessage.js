@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Image, Linking, Alert } from 
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../../constants';
+import NutritionCard from './NutritionCard';
 
 export default function ChatMessage({ item, thinkingText }) {
   const rawText = !item.isUser && (!item.text || item.text.trim() === '')
@@ -162,7 +163,7 @@ export default function ChatMessage({ item, thinkingText }) {
         fats: base.fats + (parseFloat(data.fat || data.fats) || 0),
       };
       await AsyncStorage.setItem('@currentNutrition', JSON.stringify({ date: today, nutrition: updated }));
-      Alert.alert('Added', 'Nutrition info added to today\'s diary');
+      Alert.alert('✅ Added!', 'Nutrition info has been added to your daily log.');
     } catch (err) {
       Alert.alert('Error', 'Could not save nutrition info');
     }
@@ -191,10 +192,13 @@ export default function ChatMessage({ item, thinkingText }) {
       </View>
       <View style={styles.aiContent}>
         {formatText(displayText)}
+        
+        {/* Nutrition Card - shows when there's nutrition data */}
         {item.nutritionData && item.timestamp && (
-          <TouchableOpacity style={styles.nutriButton} onPress={() => addNutrition(item.nutritionData)}>
-            <Text style={styles.nutriButtonText}>Add to Daily Nutrition Info</Text>
-          </TouchableOpacity>
+          <NutritionCard 
+            nutritionData={item.nutritionData}
+            onAdd={addNutrition}
+          />
         )}
       </View>
     </View>
@@ -218,7 +222,7 @@ const styles = StyleSheet.create({
     maxWidth: '80%',
   },
   userMessage: {
-    backgroundColor: '#FF6A00',
+    backgroundColor: COLORS.darkOrange,
   },
   userIcon: {
     marginBottom: 2,
@@ -230,7 +234,7 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: COLORS.darkBorder,
   },
   aiHeader: {
     flexDirection: 'row',
@@ -245,13 +249,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   aiLabel: {
-    color: '#FF6A00',
+    color: COLORS.darkOrange,
     fontSize: 13,
     fontWeight: '600',
     flex: 1,
   },
   aiTimestamp: {
-    color: '#888',
+    color: COLORS.textMuted,
     fontSize: 10,
   },
   aiContent: {
@@ -267,22 +271,22 @@ const styles = StyleSheet.create({
     height: 8,
   },
   messageText: {
-    color: '#FFF',
+    color: COLORS.white,
     fontSize: 14,
     lineHeight: 19,
   },
   boldText: {
     fontWeight: 'bold',
-    color: '#FFF',
+    color: COLORS.white,
   },
   italicText: {
     fontStyle: 'italic',
-    color: '#DDD',
+    color: COLORS.textSecondary,
   },
   h1Text: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#FF6A00',
+    color: COLORS.darkOrange,
     marginTop: 6,
     marginBottom: 2,
     lineHeight: 24,
@@ -290,7 +294,7 @@ const styles = StyleSheet.create({
   h2Text: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FF6A00',
+    color: COLORS.darkOrange,
     marginTop: 5,
     marginBottom: 2,
     lineHeight: 22,
@@ -298,7 +302,7 @@ const styles = StyleSheet.create({
   h3Text: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FF8A33',
+    color: COLORS.orangeLight,
     marginTop: 4,
     marginBottom: 1,
     lineHeight: 20,
@@ -308,12 +312,12 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   codeBlock: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: COLORS.darkCard,
     padding: 10,
     borderRadius: 6,
     marginVertical: 3,
     borderLeftWidth: 3,
-    borderLeftColor: '#FF6A00',
+    borderLeftColor: COLORS.darkOrange,
   },
   codeText: {
     fontFamily: 'Courier',
@@ -322,7 +326,7 @@ const styles = StyleSheet.create({
   },
   inlineCode: {
     fontFamily: 'Courier',
-    backgroundColor: '#2A2A2A',
+    backgroundColor: COLORS.darkMuted,
     color: '#A8E6CF',
     paddingHorizontal: 4,
     paddingVertical: 2,
@@ -330,23 +334,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   timestamp: {
-    color: '#fff',
+    color: COLORS.white,
     fontSize: 10,
     marginTop: 5,
     textAlign: 'right',
   },
-  nutriButton: {
-    marginTop: 10,
-    alignSelf: 'flex-start',
-    backgroundColor: COLORS.darkOrange,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-  },
-  nutriButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
 });
-

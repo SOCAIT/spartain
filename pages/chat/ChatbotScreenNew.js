@@ -294,11 +294,29 @@ useEffect(() => {
                 return { clean: txt, data: null };
               }
               let data = null;
+              let jsonStr = match[1].trim();
+              
+              // Handle double brackets {{ }} - common LLM output format
+              if (jsonStr.startsWith('{{') && jsonStr.endsWith('}}')) {
+                jsonStr = jsonStr.slice(1, -1); // Remove outer brackets
+                console.log('[Nutrition-Parser] Removed double brackets ->', jsonStr);
+              }
+              
               try {
-                data = JSON.parse(match[1]);
+                data = JSON.parse(jsonStr);
                 console.log('[Nutrition-Parser] Parsed nutrition JSON ->', data);
               } catch (err) {
                 console.log('[Nutrition-Parser] JSON parse error', err);
+                // Try one more approach: extract just the object part
+                const objectMatch = jsonStr.match(/\{[^{}]*\}/);
+                if (objectMatch) {
+                  try {
+                    data = JSON.parse(objectMatch[0]);
+                    console.log('[Nutrition-Parser] Parsed with fallback ->', data);
+                  } catch (e) {
+                    console.log('[Nutrition-Parser] Fallback parse also failed');
+                  }
+                }
               }
               const clean = txt.replace(match[0], '').trim();
               return { clean, data };

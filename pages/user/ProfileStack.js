@@ -14,6 +14,7 @@ import SettingsStack from '../settings/SettingsStack';
 // import ChangePassword from './ChangePassword'; // A screen to change the password
 import ThreeDLookScan from '../Body/3DLookScan';
 import HealthKitDashboard from './HealthKitDashboard';
+import ForgotPasswordScreen from './ForgotPassword';
 
 const Stack = createNativeStackNavigator();
 
@@ -33,6 +34,7 @@ const ProfileStack = () => {
             <Stack.Screen name="AnalyticalView" component={AnalyticalView} />
             <Stack.Screen name="HealthKitDashboard" component={HealthKitDashboard} />
             <Stack.Screen name="SettingsStack" component={SettingsStack} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
 
             {/* <Stack.Screen name="ChangePassword" component={ChangePassword} /> */}
         </Stack.Navigator>

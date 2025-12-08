@@ -95,6 +95,7 @@ const UpdateWorkoutScreen = ({ route}) => {
             repeat={true}
             muted={true}
             paused={false}
+            mixWithOthers={true}
             onError={(e) => console.log('Video loading error:', e)}
           />
         ) : (
@@ -150,6 +151,7 @@ const UpdateWorkoutScreen = ({ route}) => {
             repeat={true}
             muted={true}
             paused={false}
+            mixWithOthers={true}
             onError={(e) => console.log('Video loading error:', e)}
           />
         ) : (

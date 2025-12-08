@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { View, Image, TouchableOpacity, Text, StyleSheet, Platform, Alert, Animated } from 'react-native';
 import ArrowHeaderNew from '../../components/ArrowHeaderNew';
 import { vision_url } from '../../config/config';
-import { useSubscription } from '../../hooks/useSubscription';
+import { useSubscriptionRevenueCat } from '../../hooks/useSubscription.revenuecat';
 import SubscriptionModal from '../../components/SubscriptionModal';
 
 // Adjust this URL to point to your backend server.
@@ -10,7 +10,7 @@ import SubscriptionModal from '../../components/SubscriptionModal';
 export default function PhotoPreview({ route, navigation }) {
   const { photo } = route.params;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const { checkSubscription, showSubscriptionModal, setShowSubscriptionModal, handleSubscribe } = useSubscription();
+  const { checkSubscription, showSubscriptionModal, setShowSubscriptionModal, handleSubscribe } = useSubscriptionRevenueCat();
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {

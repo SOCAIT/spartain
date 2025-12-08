@@ -262,13 +262,13 @@ const ExerciseDetailsScreen = ({ route }) => {
           {isVideo ? (
             <Video
               source={{ uri: videoSource }}
-              //style={styles.gifImage}
+              style={styles.video}
               resizeMode="cover"
-              //width={300}
-              height={300}
               repeat={true}
               muted={true}
               paused={false}
+              autoPlay={true}
+              // mixWithOthers={true}
               onError={(e) => console.log('Video loading error:', e)}
             />
           ) : (
@@ -327,15 +327,16 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   gifImage: {
-    width: 300,
-    height: 200,
-    // marginBottom: 20,
-
     flex: 1,
     width: null,
     height: null,
     // borderRadius: 20
     //borderRadius: 100, // Make the border circular
+  },
+  video: {
+    flex: 1,
+    width: null,
+    height: null,
   },
   instructionText: {
     fontSize: 16,

@@ -135,6 +135,7 @@ const CreateWorkoutScreen = ({ route }) => {
             repeat
             muted
             paused={false}
+            mixWithOthers={true}
             onError={(e) => console.log('Video loading error:', e)}
           />
         ) : (

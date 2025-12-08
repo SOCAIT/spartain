@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   TextInput, 
@@ -9,20 +9,37 @@ import {
   ScrollView,
   Keyboard,
   TouchableWithoutFeedback,
+  Animated,
 } from 'react-native';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { COLORS } from '../../constants';
+import { COLORS, SHADOWS, SIZES } from '../../constants';
 
+/**
+ * Enhanced SearchInput with modern glass effect styling
+ */
 const SearchInput = ({ 
   search, 
   results, 
   onSelect, 
   renderSearchResultItem, 
-  placeholder="Search Exercises, Workouts",
+  placeholder = "Search Exercises, Workouts",
   categories = ["Exercises", "Workouts", "Meals"]
 }) => {
   const [searchText, setSearchText] = useState('');
   const [showResults, setShowResults] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState({});
+  const [isFocused, setIsFocused] = useState(false);
+  
+  // Animation for focus state
+  const focusAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(focusAnim, {
+      toValue: isFocused ? 1 : 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start();
+  }, [isFocused]);
 
   useEffect(() => {
     if (results && results.length > 0) {
@@ -59,55 +76,99 @@ const SearchInput = ({
     ? { [categories[0]]: results }
     : results || {};
 
+  // Animated border color
+  const borderColor = focusAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [COLORS.darkBorder, COLORS.darkOrange],
+  });
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
         {/* Search Bar */}
-        <View style={styles.searchRow}>
-          <MaterialIcons name="search" style={styles.icon} />
+        <Animated.View 
+          style={[
+            styles.searchRow,
+            { borderColor },
+            isFocused && styles.searchRowFocused,
+          ]}
+        >
+          <View style={styles.iconContainer}>
+            <MaterialIcons 
+              name="search" 
+              size={22} 
+              color={isFocused ? COLORS.darkOrange : COLORS.textMuted} 
+            />
+          </View>
+          
           <TextInput
             style={styles.input}
-            placeholderTextColor={COLORS.lightGray3}
+            placeholderTextColor={COLORS.textMuted}
             placeholder={placeholder}
             onChangeText={onChangeText}
             value={searchText}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
           />
+          
           {searchText.length > 0 && (
-            <TouchableOpacity onPress={clearSearch}>
-              <MaterialIcons name="close" style={styles.clearIcon} />
+            <TouchableOpacity 
+              onPress={clearSearch} 
+              style={styles.clearButton}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="close" size={18} color={COLORS.textSecondary} />
             </TouchableOpacity>
           )}
-        </View>
+        </Animated.View>
 
         {/* Results Container */}
         {showResults && results && results.length > 0 && (
           <View style={styles.resultsContainer}>
-            <ScrollView style={styles.resultsScroll}>
+            <ScrollView 
+              style={styles.resultsScroll}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
               {categories.map((category) => {
                 const categoryResults = categorizedResults[category] || [];
                 if (!categoryResults.length) return null;
                 
                 return (
                   <View key={category} style={styles.categorySection}>
-                    <Text style={styles.categoryTitle}>{category}</Text>
-                    {categoryResults.slice(0, 4).map((item, index) => (
+                    {/* Category Header */}
+                    <View style={styles.categoryHeader}>
+                      <View style={styles.categoryDot} />
+                      <Text style={styles.categoryTitle}>{category}</Text>
+                      <Text style={styles.categoryCount}>{categoryResults.length}</Text>
+                    </View>
+                    
+                    {/* Results */}
+                    {(expandedCategories[category] ? categoryResults : categoryResults.slice(0, 4)).map((item, index) => (
                       <TouchableOpacity 
                         key={item.id || index}
                         onPress={() => handleSelect(item)}
                         style={styles.resultItem}
+                        activeOpacity={0.7}
                       >
                         {renderSearchResultItem({ item, index })}
                       </TouchableOpacity>
                     ))}
-                    {categoryResults.length > 4 && (
+                    
+                    {/* View More */}
+                    {categoryResults.length > 4 && !expandedCategories[category] && (
                       <TouchableOpacity 
                         style={styles.viewMoreRow} 
                         onPress={() => {
                           Keyboard.dismiss();
-                          /* Implement view more action */
+                          setExpandedCategories(prev => ({ ...prev, [category]: true }));
                         }}
+                        activeOpacity={0.7}
                       >
-                        <Text style={styles.viewMoreText}>Tap to view more {category} results</Text>
+                        <Text style={styles.viewMoreText}>
+                          View {categoryResults.length - 4} more results
+                        </Text>
+                        <MaterialIcons name="expand-more" size={16} color={COLORS.darkOrange} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -124,86 +185,126 @@ const SearchInput = ({
 const styles = StyleSheet.create({
   container: {
     width: '100%',
-    padding: 10,
-    zIndex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    zIndex: 100,
   },
+  
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.light,
-    borderRadius: 10,
-    padding: Platform.OS === 'ios' ? 20 : 10,
+    backgroundColor: COLORS.darkCard,
+    borderRadius: SIZES.radiusMd,
+    paddingHorizontal: 16,
+    paddingVertical: Platform.OS === 'ios' ? 14 : 8,
+    borderWidth: 1.5,
+    borderColor: COLORS.darkBorder,
   },
+  
+  searchRowFocused: {
+    ...SHADOWS.glowSm,
+  },
+  
+  iconContainer: {
+    marginRight: 12,
+  },
+  
   input: {
     flex: 1,
     color: COLORS.white,
-    fontSize: 16,
+    fontSize: 15,
     padding: 0,
+    fontWeight: '500',
   },
-  icon: {
-    fontSize: 30,
-    color: COLORS.darkOrange,
-    marginRight: 10,
+  
+  clearButton: {
+    padding: 4,
+    backgroundColor: COLORS.darkElevated,
+    borderRadius: 12,
+    marginLeft: 8,
   },
-  clearIcon: {
-    fontSize: 20,
-    color: COLORS.darkOrange,
-    marginLeft: 10,
-  },
+  
   resultsContainer: {
     position: 'absolute',
     top: '100%',
-    left: 10,
-    right: 10,
-    backgroundColor: COLORS.dark,
-    borderRadius: 10,
-    padding: 10,
+    left: 16,
+    right: 16,
+    marginTop: 8,
+    backgroundColor: COLORS.darkCard,
+    borderRadius: SIZES.radiusMd,
+    padding: 12,
     maxHeight: 500,
-    zIndex: 2,
-    elevation: 5,
-    shadowColor: '000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.50,
-    shadowRadius: 3.84,
+    zIndex: 200,
+    borderWidth: 1,
+    borderColor: COLORS.darkBorder,
+    ...SHADOWS.lg,
   },
+  
   resultsScroll: {
     maxHeight: 450,
   },
+  
   categorySection: {
-    marginBottom: 20,
-    backgroundColor: COLORS.dark,
-    borderRadius: 8,
-    padding: 8,
+    marginBottom: 16,
   },
-  categoryTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: COLORS.darkOrange,
-    marginBottom: 5,
-    backgroundColor: COLORS.dark,
-    paddingVertical: 5,
-  },
-  resultItem: {
-    borderBottomColor: '#ccc',
-    backgroundColor: COLORS.dark,
-  },
-  viewMoreRow: {
-    paddingVertical: 10,
+  
+  categoryHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.dark,
-    borderRadius: 8,
-    marginTop: 5,
+    marginBottom: 10,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.darkBorder,
   },
-  viewMoreText: {
+  
+  categoryDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.darkOrange,
+    marginRight: 8,
+  },
+  
+  categoryTitle: {
     fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.white,
+    flex: 1,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  
+  categoryCount: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    backgroundColor: COLORS.darkElevated,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  
+  resultItem: {
+    borderRadius: SIZES.radiusSm,
+    marginBottom: 2,
+    overflow: 'hidden',
+  },
+  
+  viewMoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    backgroundColor: COLORS.orangeMuted,
+    borderRadius: SIZES.radiusSm,
+    marginTop: 8,
+  },
+  
+  viewMoreText: {
+    fontSize: 13,
     color: COLORS.darkOrange,
-    backgroundColor: COLORS.dark,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 5,
+    fontWeight: '600',
+    marginRight: 4,
   },
 });
 

@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useContext, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, Alert, Platform, Keyboard, TouchableWithoutFeedback, ScrollView, FlatList } from 'react-native';
+import React, { useEffect, useState, useContext, useCallback, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Image, TextInput, Alert, Platform, Keyboard, TouchableWithoutFeedback, ScrollView, FlatList, ActivityIndicator } from 'react-native';
 import Dropdown from '../../components/Dropdown';
 import IconHeader from '../../components/IconHeader';
 import WorkoutCard from '../../components/workouts/WokroutCard';
@@ -19,7 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import ArrowHeaderNew from '../../components/ArrowHeaderNew';
 import debounce from 'lodash.debounce';
 import SubscriptionModal from '../../components/SubscriptionModal';
-import { useSubscription } from '../../hooks/useSubscription';
+import { useSubscriptionRevenueCat } from '../../hooks/useSubscription.revenuecat';
 
 const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -30,19 +30,20 @@ const WorkoutPlanScreen = () => {
   const today = new Date();
   const currentDayIndex = today.getDay() === 0 ? 6 : today.getDay() - 1;
   const [selectedDay, setSelectedDay] = useState(currentDayIndex);
-  const { authState } = useContext(AuthContext);
+  const { authState, updateSelectedPlans } = useContext(AuthContext);
   const [workoutPlansData, setWorkoutPlansData] = useState([]);
-  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [selectedPlan, setSelectedPlan] = useState(authState?.selectedWorkoutPlan || null);
   const [selectedWorkoutPlan, setSelectedWorkoutPlan] = useState(null);
   const [selectedWorkout, setSelectedWorkout] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const hasFetchedRef = useRef(false);
 
   const [exerciseSearchResults, setExerciseSearchResults] = useState([]);
   const [selectedExercise, setSelectedExercise] = useState(null);
 
   const [modalVisible, setModalVisible] = useState(false);
 
-  const { checkSubscription, showSubscriptionModal, setShowSubscriptionModal, handleSubscribe } = useSubscription();
+  const { checkSubscription, showSubscriptionModal, setShowSubscriptionModal, handleSubscribe } = useSubscriptionRevenueCat();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Add debounced search function
@@ -168,6 +169,9 @@ const WorkoutPlanScreen = () => {
         const initialPlan = plans[0];
         setSelectedPlan(initialPlan.value);
         
+        // Update AuthContext with selected workout plan (keep nutrition plan as is)
+        updateSelectedPlans(initialPlan, authState?.selectedNutritionPlan);
+        
         const dayIndexStr = selectedDay.toString();
         const initialWorkout = initialPlan.workoutSet?.find(workout => workout.day === dayIndexStr);
         
@@ -212,7 +216,8 @@ const WorkoutPlanScreen = () => {
             resizeMode="cover"
             repeat={true}
             muted={true}
-            paused={false}
+            paused={true} // Pause search result videos by default
+            // mixWithOthers={true}
             onError={(e) => console.log('Video loading error:', e)}
           />
         ) : (
@@ -246,8 +251,12 @@ const WorkoutPlanScreen = () => {
 
 
   useEffect(() => {
-    fetchWorkouts();
-  }, []);
+    // Fetch plans once when user id becomes available; do not gate by subscription here
+    if (authState?.id && !hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+      fetchWorkouts();
+    }
+  }, [authState?.id]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -287,12 +296,21 @@ const WorkoutPlanScreen = () => {
     }
   }, [selectedPlan, selectedDay, workoutPlansData]);
 
-  const handlePlanChange = (planValue) => {
+  const handlePlanChange = async (planValue) => {
+    // Gate changing plans by subscription
+    const hasAccess = await checkSubscription('workout_plans');
+    if (!hasAccess) {
+      setShowSubscriptionModal(true);
+      return;
+    }
     console.log("Plan Selected:", planValue);
     setSelectedPlan(planValue);
     
     const currentPlan = workoutPlansData.find(plan => plan.value === planValue);
     if (currentPlan && currentPlan.workoutSet) {
+      // Update AuthContext with newly selected workout plan (keep nutrition plan as is)
+      updateSelectedPlans(currentPlan, authState?.selectedNutritionPlan);
+      
       const dayIndexStr = selectedDay.toString();
       const workoutForDay = currentPlan.workoutSet.find(workout => workout.day === dayIndexStr);
       
@@ -340,8 +358,20 @@ const WorkoutPlanScreen = () => {
    }
 
    const options = [
-    {iconType: 'Ionicons', iconName: 'add-circle-outline', label: 'Add plan', onPress: () => navigation.navigate('AddModifyPlan') },
-    { iconType: 'MaterialCommunityIcons',iconName: 'file-edit-outline', label: 'Update current plan',onPress:() => {
+    {iconType: 'Ionicons', iconName: 'add-circle-outline', label: 'Add plan', onPress: async () => {
+      const hasAccess = await checkSubscription('workout_plans');
+      if (!hasAccess) {
+        setShowSubscriptionModal(true);
+        return;
+      }
+      navigation.navigate('AddModifyPlan');
+    }},
+    { iconType: 'MaterialCommunityIcons',iconName: 'file-edit-outline', label: 'Update current plan',onPress: async () => {
+      const hasAccess = await checkSubscription('workout_plans');
+      if (!hasAccess) {
+        setShowSubscriptionModal(true);
+        return;
+      }
       if (selectedWorkoutPlan && selectedWorkoutPlan.workoutSet) {
         navigation.navigate('UpdateWorkoutPlan', { workoutPlan: selectedWorkoutPlan });
       } else {
@@ -408,6 +438,9 @@ const WorkoutPlanScreen = () => {
           )}
           <IconButton name='add' onPress={() => setModalVisible(true)} />
           <IconButton name='refresh' onPress={handleRefresh} disabled={isRefreshing} />
+          {isRefreshing ? (
+            <ActivityIndicator size="small" color="#ffffff" style={{ marginLeft: 8 }} />
+          ) : null}
         </View>
 
         <SectionHeader title={`Workout for ${daysOfWeek[selectedDay]}`} childComponent={renderWorkout()}/>

@@ -3,7 +3,7 @@ import React, { useState, useCallback } from 'react'
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-const CustomCarousel = ({items = [], renderItem, navigation}) => {
+const CustomCarousel = ({items = [], renderItem, navigation, cardHeight = 175}) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const { width } = useWindowDimensions();
 
@@ -34,11 +34,12 @@ const CustomCarousel = ({items = [], renderItem, navigation}) => {
         pagingEnabled={false}
         showsHorizontalScrollIndicator={false}
         keyExtractor={(item, index) => index.toString()}
-        style={styles.metricsScrollContainer}
+        style={[styles.metricsScrollContainer, { height: cardHeight }]}
+        contentContainerStyle={styles.contentContainer}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
-        snapToAlignment="center"
-        snapToInterval={260} // Width of card (250) + padding (10)
+        snapToAlignment="start"
+        snapToInterval={260}
         decelerationRate="fast"
         scrollEventThrottle={16}
       />
@@ -59,25 +60,28 @@ const CustomCarousel = ({items = [], renderItem, navigation}) => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     alignItems: 'center',
+    marginBottom: 10,
   },
   metricsScrollContainer: {
     flexDirection: 'row',
     width: '100%',
-    flexGrow: 0, // Prevent taking up extra space
+  },
+  contentContainer: {
+    paddingHorizontal: 10,
+    alignItems: 'center',
   },
   itemWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 5, // Small padding between items
-    width: 260, // Fixed width for proper scrolling (250 + 10 padding)
+    paddingHorizontal: 5,
+    width: 260,
   },
   indicatorContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 12,
   },
   indicator: {
     width: 8,
@@ -94,7 +98,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 15,
     justifyContent: 'space-between',
-    marginRight: 0, // Remove right margin
+    marginRight: 0,
   },
   metricValue: {
     color: '#FFF',
@@ -104,7 +108,7 @@ const styles = StyleSheet.create({
   metricLabel: {
     color: '#FFF',
     fontSize: 14,
-    textAlign: 'center', // Center the label text
+    textAlign: 'center',
   },
   metricIcon: {
     position: 'absolute',

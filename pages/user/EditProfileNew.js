@@ -334,7 +334,9 @@ export default function EditProfileScreen({ route }) {
         {/* Profile Section Card */}
         <View style={styles.profileCard}>
           {/* Profile Picture Section */}
-          <TouchableOpacity style={styles.profilePicContainer} onPress={openPhotoModal}>
+          {/* COMMENTED OUT - Re-enable when backend is ready */}
+          {/* <TouchableOpacity style={styles.profilePicContainer} onPress={openPhotoModal}> */}
+          <View style={styles.profilePicContainer}>
             {profilePhoto ? (
               <Image
                 source={{ uri: profilePhoto }}
@@ -345,13 +347,14 @@ export default function EditProfileScreen({ route }) {
                 <MaterialIcons name="person" size={50} color="#FF6A00" />
               </View>
             )}
-            <View style={styles.cameraIconContainer}>
+            {/* <View style={styles.cameraIconContainer}>
               <MaterialIcons name="camera-alt" size={20} color="#FFF" />
-            </View>
-          </TouchableOpacity>
+            </View> */}
+          </View>
+          {/* </TouchableOpacity> */}
           
           <Text style={styles.profileName}>{authState.username}</Text>
-          <Text style={styles.profileSubtitle}>Tap photo to change</Text>
+          <Text style={styles.profileSubtitle}>Photo upload coming soon</Text>
         </View>
 
         {/* Subscription Card */}
@@ -536,8 +539,8 @@ export default function EditProfileScreen({ route }) {
         </View>
       </ScrollView>
 
-      {/* Photo Selection Modal */}
-      <Modal
+      {/* Photo Selection Modal - COMMENTED OUT until backend is ready */}
+      {/* <Modal
         animationType="slide"
         transparent={true}
         visible={photoModalVisible}
@@ -547,13 +550,13 @@ export default function EditProfileScreen({ route }) {
           <View style={styles.photoModalContent}>
             <Text style={styles.photoModalTitle}>Change Profile Photo</Text>
             
-            {/* <TouchableOpacity
+            <TouchableOpacity
               style={styles.photoOption}
               onPress={() => handlePhotoSelection('camera')}
             >
               <MaterialIcons name="camera-alt" size={28} color="#FF6A00" />
               <Text style={styles.photoOptionText}>Take Photo</Text>
-            </TouchableOpacity> */}
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.photoOption}
@@ -571,7 +574,7 @@ export default function EditProfileScreen({ route }) {
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+      </Modal> */}
 
       {/* Modal for Body Measurements */}
       <Modal

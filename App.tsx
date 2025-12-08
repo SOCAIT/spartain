@@ -7,7 +7,7 @@ import {
   View,
   Animated,
   Image,
-
+  Alert,
 } from 'react-native';
 import axios from 'axios';
 import { COLORS } from './constants';
@@ -23,6 +23,7 @@ import Tabs from './navigation/tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import OnboardingScreen from './pages/onboarding/OnboardingScreen';
 import Wizard from './pages/onboarding/OnboardingWizard';
+import ForgotPasswordScreen from './pages/user/ForgotPassword';
 
 import { runSahhaMinimalTest } from './services/HealthKitService';
 
@@ -66,20 +67,36 @@ const SplashScreen = () => {
 
 import Purchases, {LOG_LEVEL, CustomerInfo} from 'react-native-purchases';
 import { Platform } from 'react-native';
+import { REVENUECAT_KEYS, ENTITLEMENT_ID } from './config/subscription';
 
-const REVENUECAT_API_KEY = Platform.select({
-  ios: 'appl_KHUmUupOtJXSBnhSNbxpSyzZnOd',
-  android: 'google_D3E15744',
-});
+const REVENUECAT_API_KEY = Platform.select(REVENUECAT_KEYS);
 
+/**
+ * Initialize RevenueCat with user identification
+ * @param {string} appUserId - User ID to identify the customer
+ * @returns {Promise<boolean>} True if initialization successful
+ */
 export async function initRevenueCat(appUserId: string) {
-  Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+  try {
+    Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
 
-    if (Platform.OS === 'ios') {
-       Purchases.configure({apiKey: REVENUECAT_API_KEY as string});
-    } else if (Platform.OS === 'android') {
-       Purchases.configure({apiKey: REVENUECAT_API_KEY as string});
-     }
+    // Validate user ID before initialization
+    if (!appUserId || appUserId === "" || appUserId === "0") {
+      console.warn('[RevenueCat] Cannot initialize with invalid user ID:', appUserId);
+      return false;
+    }
+
+    await Purchases.configure({
+      apiKey: REVENUECAT_API_KEY as string,
+      appUserID: appUserId // Set user ID during configuration
+    });
+
+    console.log('[RevenueCat] Initialized successfully for user:', appUserId);
+    return true;
+  } catch (error) {
+    console.error('[RevenueCat] Initialization failed:', error);
+    return false;
+  }
 }
  
 function App(): React.JSX.Element {
@@ -90,7 +107,9 @@ function App(): React.JSX.Element {
     status: false,
     profile_photo: "",
     isSubscribed: false,
-    subscriptionExpiry: null
+    subscriptionExpiry: null,
+    selectedWorkoutPlan: null,
+    selectedNutritionPlan: null,
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -153,38 +172,7 @@ function App(): React.JSX.Element {
    
     getValueFor("accessToken", setToken);
     test_api();
-    initRevenueCat(authState.username);
-    // Listen for RevenueCat entitlement updates and reflect in authState
-    try {
-      Purchases.addCustomerInfoUpdateListener((info: CustomerInfo) => {
-        console.log('info', info);
-        const premium = info?.entitlements?.active?.premium;
-        // const isPro = !!premium;
-
-        const pro = info?.entitlements?.active?.["Pro"];
-        const isPro = !!pro;
-        const expiry = (pro as any)?.expirationDate || null;
-
-         
-        setAuthState((prev: any) => ({
-          ...prev,
-          isSubscribed: isPro,
-          subscriptionExpiry: expiry,
-        }));
-      }) ;
-    } catch (_) {}
-    // Initial RC status fetch
-    (async () => {
-      try {
-        const info = await Purchases.getCustomerInfo();
-        const pro = info?.entitlements?.active?.["Pro"];
-        const isPro = !!pro;
-        const expiry = (pro as any)?.expirationDate || null;
-        if (isPro) {
-          setAuthState((prev: any) => ({ ...prev, isSubscribed: true, subscriptionExpiry: expiry }));
-        }
-      } catch (_) {}
-    })();
+    
     // Check and clear expired subscription data on app start
     const checkExpiredSubscription = async () => {
       try {
@@ -194,19 +182,77 @@ function App(): React.JSX.Element {
           const now = new Date();
           
           if (now > expiryDate) {
-            console.log('Found expired subscription, cleaning up...');
+            console.log('[App] Found expired subscription, cleaning up...');
             await AsyncStorage.setItem('isSubscribed', 'false');
             await AsyncStorage.removeItem('subscriptionExpiry');
-            console.log('✅ Expired subscription cleaned up');
+            console.log('[App] ✅ Expired subscription cleaned up');
           }
         }
       } catch (error) {
-        console.error('Error checking expired subscription:', error);
+        console.error('[App] Error checking expired subscription:', error);
       }
     };
     
     checkExpiredSubscription();
   }, []);
+
+  // Initialize RevenueCat AFTER user is authenticated
+  useEffect(() => {
+    const initializeRevenueCat = async () => {
+      // Only initialize after we have a valid user ID
+      if (authState.id && authState.id !== 0) {
+        console.log('[App] Initializing RevenueCat for user:', authState.id);
+        const initialized = await initRevenueCat(String(authState.id));
+        
+        if (initialized) {
+          // Listen for RevenueCat entitlement updates
+          try {
+            Purchases.addCustomerInfoUpdateListener((info: CustomerInfo) => {
+              const entitlement = info?.entitlements?.active?.[ENTITLEMENT_ID];
+              const isPro = !!entitlement;
+              const expiry = (entitlement as any)?.expirationDate || null;
+
+              console.log('[App] RevenueCat update:', {
+                isPro,
+                expiry,
+                entitlementId: ENTITLEMENT_ID
+              });
+            
+              setAuthState((prev: any) => ({
+                ...prev,
+                isSubscribed: isPro,
+                subscriptionExpiry: expiry,
+              }));
+            });
+            console.log('[App] RevenueCat listener attached');
+          } catch (error) {
+            console.error('[App] Failed to attach listener:', error);
+          }
+
+          // Fetch initial subscription status
+          try {
+            const info = await Purchases.getCustomerInfo();
+            const entitlement = info?.entitlements?.active?.[ENTITLEMENT_ID];
+            const isPro = !!entitlement;
+            const expiry = (entitlement as any)?.expirationDate || null;
+            
+            if (isPro) {
+              console.log('[App] User has active subscription');
+              setAuthState((prev: any) => ({
+                ...prev,
+                isSubscribed: true,
+                subscriptionExpiry: expiry
+              }));
+            }
+          } catch (error) {
+            console.error('[App] Failed to get initial customer info:', error);
+          }
+        }
+      }
+    };
+
+    initializeRevenueCat();
+  }, [authState.id]); // Re-initialize when user changes
 
   // Second useEffect to perform the auth check when token is available.
   useEffect(() => {
@@ -271,13 +317,16 @@ function App(): React.JSX.Element {
                 try {
                   await Purchases.logIn(String(response.data.id || response.data.username));
                   const info = await Purchases.getCustomerInfo();
-                  const premium = (info as any)?.entitlements?.active?.premium;
-                  const isPro = !!premium;
-                  const expiry = premium?.expirationDate || null;
+                  const entitlement = (info as any)?.entitlements?.active?.[ENTITLEMENT_ID];
+                  const isPro = !!entitlement;
+                  const expiry = entitlement?.expirationDate || null;
                   if (isPro || expiry) {
+                    console.log('[App] RevenueCat login successful, subscription found');
                     setAuthState((prev: any) => ({ ...prev, isSubscribed: isPro, subscriptionExpiry: expiry }));
                   }
-                } catch (_) {}
+                } catch (error) {
+                  console.error('[App] RevenueCat login failed:', error);
+                }
               })();
             });
           });
@@ -357,6 +406,29 @@ function App(): React.JSX.Element {
     }
   };
 
+  // Update selected workout/nutrition plans and persist to storage
+  const updateSelectedPlans = async (selectedWorkoutPlan: any, selectedNutritionPlan: any) => {
+    try {
+      if (selectedWorkoutPlan) {
+        await AsyncStorage.setItem('selectedWorkoutPlan', JSON.stringify(selectedWorkoutPlan));
+      } else {
+        await AsyncStorage.removeItem('selectedWorkoutPlan');
+      }
+      if (selectedNutritionPlan) {
+        await AsyncStorage.setItem('selectedNutritionPlan', JSON.stringify(selectedNutritionPlan));
+      } else {
+        await AsyncStorage.removeItem('selectedNutritionPlan');
+      }
+      setAuthState((prev: any) => ({
+        ...prev,
+        selectedWorkoutPlan: selectedWorkoutPlan || null,
+        selectedNutritionPlan: selectedNutritionPlan || null,
+      }));
+    } catch (error) {
+      console.error('Error updating selected plans:', error);
+    }
+  };
+
   // Add updateSubscriptionStatus function for subscription management
   const updateSubscriptionStatus = async (isSubscribed: boolean, expiryDate: string | null = null) => {
     try {
@@ -381,7 +453,7 @@ function App(): React.JSX.Element {
   }
 
   return (
-    <AuthContext.Provider value={{ authState, setAuthState, logout, deleteAccount, updateSubscriptionStatus }}>
+    <AuthContext.Provider value={{ authState, setAuthState, logout, deleteAccount, updateSubscriptionStatus, updateSelectedPlans }}>
       <NavigationContainer theme={MyTheme}>
       {authState.status ? (
         hasOnboarded ? (
@@ -398,6 +470,7 @@ function App(): React.JSX.Element {
           <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.dark } }}>
             <Stack.Screen name="Login" component={SignInScreen} />
             <Stack.Screen name="Signup" component={SignUpScreen} />
+            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           </Stack.Navigator>
         )}
       </NavigationContainer>

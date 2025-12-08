@@ -52,7 +52,8 @@ const ExerciseSearch = () => {
               resizeMode="cover"
               repeat={true}
               muted={true}
-              paused={false}
+              paused={true} // Pause by default in search results to avoid crash
+              // mixWithOthers={true}
               onError={(e) => console.log('Video loading error:', e)}
             />
           ) : (
@@ -109,7 +110,8 @@ const ExerciseSearch = () => {
               resizeMode="cover"
               repeat={true}
               muted={true}
-              paused={false}
+              paused={true} // Pause by default in search results to avoid crash
+              // mixWithOthers={true}
               onError={(e) => console.log('Video loading error:', e)}
             />
           ) : (

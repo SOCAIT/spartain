@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
-
-
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Platform } from 'react-native';
 import StylishCard from '../../components/StylishCard';
 import { useNavigation } from '@react-navigation/native';
-
 import { backend_url } from '../../config/config';
 import { COLORS } from '../../constants';
 import ArrowHeader from '../../components/ArrowHeader';
@@ -33,7 +30,6 @@ const exercises_dummy = [
   }
 ]
 
-
 const WorkoutScreen = ({ route }) => {
   const { workout } = route.params;
   const navigation = useNavigation();
@@ -42,8 +38,6 @@ const WorkoutScreen = ({ route }) => {
     navigation.navigate('ExerciseDetails', { exercise });
   }; 
 
-  
- 
   return (
     <View style={styles.container}>
       <ArrowHeaderNew navigation={navigation} title={workout.name} paddingTop={10} />
@@ -51,7 +45,6 @@ const WorkoutScreen = ({ route }) => {
       <FlatList
         data={workout.workoutexerciseSet}
         renderItem={({ item }) => (
-          
           <ExerciseCard navigation={navigation} exerciseItem={item}/>
         )}
         keyExtractor={(item, index) => index.toString()}
@@ -75,7 +68,6 @@ const styles = StyleSheet.create({
   exerciseTouchable: {
     marginBottom: 10,
   },
-
   imageContainer: {
     borderRadius: 10,
     overflow: 'hidden', // Ensure the image is properly clipped to the border radius
@@ -87,7 +79,6 @@ const styles = StyleSheet.create({
     // width: 300,
     // height: 200,
     // marginBottom: 20,
-
     flex: 1,
     width: null,
     height: null,
@@ -103,9 +94,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
   },
-
-
-
   card: {
     marginVertical: 10,
     backgroundColor: '#2b2b2b',

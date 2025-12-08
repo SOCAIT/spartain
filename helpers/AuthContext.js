@@ -80,11 +80,13 @@ export const AuthProvider = ({ children }) => {
     target_nutrition_data: null,
     isSubscribed: false,
     subscriptionExpiry: null,
+    selectedWorkoutPlan: null,
+    selectedNutritionPlan: null,
   }));
 
   useEffect(() => {
     loadToken();
-    loadSubscriptionStatus();
+    // Note: Subscription status is now managed by RevenueCat hook, not here
   }, []);
 
   const loadToken = async () => {
@@ -99,6 +101,9 @@ export const AuthProvider = ({ children }) => {
         // const isSubscribed = subscriptionResponse.data.is_subscribed;
         // const subscriptionExpiry = subscriptionResponse.data.expiry_date;
         
+        const savedWorkoutPlan = await AsyncStorage.getItem('selectedWorkoutPlan');
+        const savedNutritionPlan = await AsyncStorage.getItem('selectedNutritionPlan');
+        
         setAuthState(sanitizeAuthState({
           token,
           authenticated: true,
@@ -106,6 +111,8 @@ export const AuthProvider = ({ children }) => {
           target_nutrition_data: userResponse.data.target_nutrition_data,
           isSubscribed: await AsyncStorage.getItem('isSubscribed') === 'true',
           subscriptionExpiry: await AsyncStorage.getItem('subscriptionExpiry'),
+          selectedWorkoutPlan: savedWorkoutPlan ? JSON.parse(savedWorkoutPlan) : null,
+          selectedNutritionPlan: savedNutritionPlan ? JSON.parse(savedNutritionPlan) : null,
         }));
       }
     } catch (error) {
@@ -121,48 +128,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const loadSubscriptionStatus = async () => {
-    try {
-      // TODO: When backend subscription endpoint is ready, replace this with:
-      // const response = await axios.get(`${backend_url}subscription-status/`);
-      // const isSubscribed = response.data.is_subscribed;
-      // const subscriptionExpiry = response.data.expiry_date;
-      
-      const isSubscribed = await AsyncStorage.getItem('isSubscribed') === 'true';
-      const subscriptionExpiry = await AsyncStorage.getItem('subscriptionExpiry');
-      
-      if (subscriptionExpiry) {
-        // Check if subscription has expired
-        const expiryDate = new Date(subscriptionExpiry);
-        const now = new Date();
-        console.log('🔍 AuthContext checking subscription expiry:');
-        console.log('  - Expiry date:', subscriptionExpiry, '→', expiryDate);
-        console.log('  - Current date:', now);
-        console.log('  - Is expired?', now > expiryDate);
-        
-        if (now > expiryDate) {
-          // Subscription has expired
-          console.log('🚨 AuthContext: Subscription has expired, cleaning up...');
-          await AsyncStorage.setItem('isSubscribed', 'false');
-          await AsyncStorage.removeItem('subscriptionExpiry');
-          setAuthState(prev => sanitizeAuthState({
-            ...prev,
-            isSubscribed: false,
-            subscriptionExpiry: null,
-          }));
-          return;
-        }
-      }
-
-      setAuthState(prev => sanitizeAuthState({
-        ...prev,
-        isSubscribed,
-        subscriptionExpiry,
-      }));
-    } catch (error) {
-      console.error('Error loading subscription status:', error);
-    }
-  };
+  // Subscription status is now managed entirely by RevenueCat via useSubscription.revenuecat hook
+  // AsyncStorage is only used for offline caching, not validation
+  // The hook calls updateSubscriptionStatus() to keep AuthContext in sync
 
   const login = async (email, password) => {
     try {
@@ -184,6 +152,9 @@ export const AuthProvider = ({ children }) => {
       // const isSubscribed = subscriptionResponse.data.is_subscribed;
       // const subscriptionExpiry = subscriptionResponse.data.expiry_date;
 
+      const savedWorkoutPlan = await AsyncStorage.getItem('selectedWorkoutPlan');
+      const savedNutritionPlan = await AsyncStorage.getItem('selectedNutritionPlan');
+      
       setAuthState(sanitizeAuthState({
         token: access,
         authenticated: true,
@@ -191,6 +162,8 @@ export const AuthProvider = ({ children }) => {
         target_nutrition_data: userResponse.data.target_nutrition_data,
         isSubscribed: await AsyncStorage.getItem('isSubscribed') === 'true',
         subscriptionExpiry: await AsyncStorage.getItem('subscriptionExpiry'),
+        selectedWorkoutPlan: savedWorkoutPlan ? JSON.parse(savedWorkoutPlan) : null,
+        selectedNutritionPlan: savedNutritionPlan ? JSON.parse(savedNutritionPlan) : null,
       }));
 
       return { success: true };
@@ -207,6 +180,8 @@ export const AuthProvider = ({ children }) => {
     try {
       await AsyncStorage.removeItem('token');
       await AsyncStorage.removeItem('refreshToken');
+      await AsyncStorage.removeItem('selectedWorkoutPlan');
+      await AsyncStorage.removeItem('selectedNutritionPlan');
       delete axios.defaults.headers.common['Authorization'];
       setAuthState(sanitizeAuthState({
         token: null,
@@ -215,34 +190,95 @@ export const AuthProvider = ({ children }) => {
         target_nutrition_data: null,
         //isSubscribed: false,
         subscriptionExpiry: null,
+        selectedWorkoutPlan: null,
+        selectedNutritionPlan: null,
       }));
     } catch (error) {
       console.error('Logout error:', error);
     }
   };
 
+  /**
+   * Update subscription status in AuthContext
+   * Called by RevenueCat subscription hook to keep app state in sync
+   * 
+   * @param {boolean} isSubscribed - Whether user has active subscription
+   * @param {string|null} expiryDate - ISO date string of subscription expiry
+   */
   const updateSubscriptionStatus = async (isSubscribed, expiryDate = null) => {
     try {
-      // TODO: When backend subscription endpoint is ready, replace this with:
-      // const response = await axios.post(`${backend_url}update-subscription/`, {
-      //   is_subscribed: isSubscribed,
-      //   expiry_date: expiryDate
-      // });
-      // const updatedStatus = response.data;
+      console.log('[AuthContext] Updating subscription status:', {
+        isSubscribed,
+        expiryDate
+      });
       
+      // Store in AsyncStorage for offline caching only (NOT for validation)
       await AsyncStorage.setItem('isSubscribed', isSubscribed.toString());
       if (expiryDate) {
         await AsyncStorage.setItem('subscriptionExpiry', expiryDate);
+      } else {
+        await AsyncStorage.removeItem('subscriptionExpiry');
       }
       
+      // Update AuthContext state
       setAuthState(prev => sanitizeAuthState({
         ...prev,
         isSubscribed,
         subscriptionExpiry: expiryDate,
         user: prev.user ? { ...prev.user, is_subscribed: isSubscribed } : prev.user,
       }));
+      
+      console.log('[AuthContext] Subscription status updated successfully');
+      
+      // TODO: When backend subscription endpoint is ready, also sync with backend:
+      // await axios.post(`${backend_url}subscription/sync/`, {
+      //   is_subscribed: isSubscribed,
+      //   expiry_date: expiryDate
+      // });
     } catch (error) {
-      console.error('Error updating subscription status:', error);
+      console.error('[AuthContext] Error updating subscription status:', error);
+    }
+  };
+
+  /**
+   * Update selected plans in AuthContext
+   * This persists the plan selections across app sessions
+   * 
+   * @param {object} selectedWorkoutPlan - The currently selected workout plan
+   * @param {object} selectedNutritionPlan - The currently selected nutrition plan
+   */
+  const updateSelectedPlans = async (selectedWorkoutPlan, selectedNutritionPlan) => {
+    try {
+      console.log('[AuthContext] Updating selected plans:', {
+        workoutPlanId: selectedWorkoutPlan?.id || selectedWorkoutPlan?.value,
+        workoutPlanName: selectedWorkoutPlan?.label || selectedWorkoutPlan?.name,
+        nutritionPlanId: selectedNutritionPlan?.id || selectedNutritionPlan?.value,
+        nutritionPlanName: selectedNutritionPlan?.label || selectedNutritionPlan?.name,
+      });
+      
+      // Store in AsyncStorage for persistence
+      if (selectedWorkoutPlan) {
+        await AsyncStorage.setItem('selectedWorkoutPlan', JSON.stringify(selectedWorkoutPlan));
+      } else {
+        await AsyncStorage.removeItem('selectedWorkoutPlan');
+      }
+      
+      if (selectedNutritionPlan) {
+        await AsyncStorage.setItem('selectedNutritionPlan', JSON.stringify(selectedNutritionPlan));
+      } else {
+        await AsyncStorage.removeItem('selectedNutritionPlan');
+      }
+      
+      // Update AuthContext state
+      setAuthState(prev => sanitizeAuthState({
+        ...prev,
+        selectedWorkoutPlan: selectedWorkoutPlan || null,
+        selectedNutritionPlan: selectedNutritionPlan || null,
+      }));
+      
+      console.log('[AuthContext] Selected plans updated successfully');
+    } catch (error) {
+      console.error('[AuthContext] Error updating selected plans:', error);
     }
   };
 
@@ -257,6 +293,8 @@ export const AuthProvider = ({ children }) => {
         await AsyncStorage.removeItem('refreshToken');
         await AsyncStorage.removeItem('isSubscribed');
         await AsyncStorage.removeItem('subscriptionExpiry');
+        await AsyncStorage.removeItem('selectedWorkoutPlan');
+        await AsyncStorage.removeItem('selectedNutritionPlan');
         delete axios.defaults.headers.common['Authorization'];
         
         // Reset auth state
@@ -267,6 +305,8 @@ export const AuthProvider = ({ children }) => {
           target_nutrition_data: null,
           isSubscribed: false,
           subscriptionExpiry: null,
+          selectedWorkoutPlan: null,
+          selectedNutritionPlan: null,
         }));
         
         return { success: true };
@@ -290,6 +330,7 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         updateSubscriptionStatus,
+        updateSelectedPlans,
         deleteAccount,
       }}
     >

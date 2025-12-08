@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView,  Image, Alert, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView,  Image, Alert, Platform, Keyboard, TouchableWithoutFeedback, ActivityIndicator } from 'react-native';
 import Dropdown from '../../components/Dropdown';
 import IconHeader from '../../components/IconHeader';
 import { COLORS } from '../../constants';
@@ -21,6 +21,8 @@ import NutritionSummary from '../../components/nutrition/NutritionSummary';
 import DaySelector from '../../components/DaySelector';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import debounce from 'lodash.debounce';
+import { useSubscriptionRevenueCat } from '../../hooks/useSubscription.revenuecat';
+import SubscriptionModal from '../../components/SubscriptionModal';
 
 const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -48,9 +50,27 @@ const NutritionPlan = ({ navigation, route }) => {
   const [mealSearchResults, setMealSearchResults] = useState([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Subscription checks will be done on user actions, not on initial load
+  const { checkSubscription, showSubscriptionModal, setShowSubscriptionModal } = useSubscriptionRevenueCat();
+  const hasFetchedRef = useRef(false);
+
   const options = [
-    {iconType: 'Ionicons', iconName: 'add-circle-outline', label: 'Add plan', onPress: () => navigation.navigate('AddModifyPlan') },
-    { iconType: 'MaterialCommunityIcons',iconName: 'file-edit-outline', label: 'Update current plan',onPress:() => navigation.navigate('AddModifyPlan', { nutritionPlan: selectedPlan })},
+    {iconType: 'Ionicons', iconName: 'add-circle-outline', label: 'Add plan', onPress: async () => {
+      const hasAccess = await checkSubscription('nutrition_plans');
+      if (!hasAccess) {
+        setShowSubscriptionModal(true);
+        return;
+      }
+      navigation.navigate('AddModifyPlan');
+    }},
+    { iconType: 'MaterialCommunityIcons',iconName: 'file-edit-outline', label: 'Update current plan',onPress: async () => {
+      const hasAccess = await checkSubscription('nutrition_plans');
+      if (!hasAccess) {
+        setShowSubscriptionModal(true);
+        return;
+      }
+      navigation.navigate('AddModifyPlan', { nutritionPlan: selectedPlan });
+    }},
 
     // TODO: add AI nutrition plan screen later
     //{ iconType: 'MaterialCommunityIcons',iconName: 'brain', label: 'ask AI for plan', onPress: () => navigation.navigate('AINutritionPlan') },
@@ -83,6 +103,7 @@ const NutritionPlan = ({ navigation, route }) => {
             day
             id
             dailymealplandetailSet {
+              quantity
               meal {
                 id
                 name
@@ -92,6 +113,7 @@ const NutritionPlan = ({ navigation, route }) => {
                 recipe
                 steps
                 description
+                ingredients
                 calories
               }
             }
@@ -99,7 +121,7 @@ const NutritionPlan = ({ navigation, route }) => {
         }
       }
     `
-  }; 0
+  };
 
   const dummy_meals = [
     {
@@ -209,7 +231,7 @@ const NutritionPlan = ({ navigation, route }) => {
       setIsRefreshing(false);
 
       if (plans.length > 0) {
-        setSelectedPlan(plans[0]);
+        setSelectedPlan(plans[0].value);
         console.log("rer0")
         // console.log(plans[0].dailymealplanSet)
 
@@ -226,9 +248,12 @@ const NutritionPlan = ({ navigation, route }) => {
   };
  
   useEffect(() => {
-    fetchNutritionPlans(selectedDay);
-    
-  }, []);
+    // Fetch plans once when user id becomes available (no subscription gating here)
+    if (authState?.id && !hasFetchedRef.current) {
+      hasFetchedRef.current = true;
+      fetchNutritionPlans(selectedDay);
+    }
+  }, [authState?.id]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -364,20 +389,20 @@ const NutritionPlan = ({ navigation, route }) => {
     }
   };
 
-  const handlePlanChange = (planValue) => {
+  const handlePlanChange = async (planValue) => {
+    // Gate changing plans by subscription
+    const hasAccess = await checkSubscription('nutrition_plans');
+    if (!hasAccess) {
+      setShowSubscriptionModal(true);
+      return;
+    }
     setSelectedPlan(planValue);
-    
-
-
     console.log("Plan Selected:", planValue);
-    setSelectedPlan(planValue); // Update selected plan
     const currentPlan = nutritionPlansData.find(plan => plan.value === planValue);
     console.log(currentPlan)
     if (currentPlan) {
       const mealPlanForDay = currentPlan.dailymealplanSet.find(p => p.day === daysOfWeek.indexOf(selectedDay));
       setSelectedMealPlan(mealPlanForDay);
-
-      console.log("rer" + mealPlanForDay)
       console.log("Nutrition for Selected Day after Plan Change:", mealPlanForDay);
     }
   };
@@ -461,27 +486,39 @@ const NutritionPlan = ({ navigation, route }) => {
           )}     
           <IconButton name='add' onPress={() => setModalVisible(true)} />
           <IconButton name='refresh' onPress={handleRefresh} disabled={isRefreshing} />
+          {isRefreshing ? (
+            <ActivityIndicator size="small" color="#ffffff" style={{ marginLeft: 8 }} />
+          ) : null}
         </View>
 
         <Text style={styles.mealsTitle}>Your Meals</Text>
-        {selectedMealPlan?.dailymealplandetailSet && selectedMealPlan.dailymealplandetailSet.length > 0 ? (
-          <CustomCarousel 
-            items={selectedMealPlan.dailymealplandetailSet} 
-            renderItem={renderMealCard} 
-            navigation={navigation}
-          />
-        ) : (
-          <View style={{ padding: 20, alignItems: 'center' }}>
-            <Text style={{ color: '#fff', fontSize: 16 }}>
-              No meals planned for {selectedDay}
-            </Text>
-          </View>
-        )}
+        <View style={styles.carouselContainer}>
+          {selectedMealPlan?.dailymealplandetailSet && selectedMealPlan.dailymealplandetailSet.length > 0 ? (
+            <CustomCarousel 
+              items={selectedMealPlan.dailymealplandetailSet} 
+              renderItem={renderMealCard} 
+              navigation={navigation}
+              cardHeight={175}
+            />
+          ) : (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ color: '#fff', fontSize: 16 }}>
+                No meals planned for {selectedDay}
+              </Text>
+            </View>
+          )}
+        </View>
 
         <OptionModal
           isVisible={modalVisible}
           options={options}
           onClose={() => setModalVisible(false)}
+        />
+
+        <SubscriptionModal
+          visible={showSubscriptionModal}
+          onClose={() => setShowSubscriptionModal(false)}
+          navigation={navigation}
         />
       </View>
     </TouchableWithoutFeedback>
@@ -491,7 +528,7 @@ const NutritionPlan = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: Platform.OS === 'ios' ? 30 : 10,
+    paddingTop: Platform.OS === 'ios' ? 50 : 10,
     backgroundColor: COLORS.dark,
   },
   title: {
@@ -561,6 +598,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     paddingHorizontal: 20,
     marginBottom: 10,
+  },
+  carouselContainer: {
+    minHeight: 200,
+    marginBottom: 20,
   },
   mealCard: {
     flexDirection: 'row',

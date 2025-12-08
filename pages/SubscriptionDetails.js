@@ -15,7 +15,7 @@ import ArrowHeaderNew from "../components/ArrowHeaderNew";
 import { COLORS } from "../constants";
 import * as RNIap from "react-native-iap";
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useSubscription } from "../hooks/useSubscription";
+import { useSubscriptionRevenueCat } from "../hooks/useSubscription.revenuecat";
 
 const subscription_group = "syntrafit_sub_group";
 
@@ -27,7 +27,7 @@ const productIds = [
 ];
 
 const ProSubscriptionScreen = ({ navigation }) => {
-  const { openManageSubscriptions } = useSubscription();
+  const { openManageSubscriptions } = useSubscriptionRevenueCat();
   const [isYearly, setIsYearly] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [products, setProducts] = useState([]);
