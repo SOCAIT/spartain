@@ -100,6 +100,7 @@ const UserProfileCard = ({ authState, navigation }) => {
         {/* Divider */}
         <View style={styles.divider} />
 
+        <View style={styles.subscriptionContainer}>
         {/* Subscription Status */}
         <View style={styles.subscriptionStatusContainer}>
           <View style={styles.subscriptionInfo}>
@@ -140,6 +141,7 @@ const UserProfileCard = ({ authState, navigation }) => {
           <MaterialIcons name="edit" size={18} color="#FFF" />
           <Text style={styles.editButtonText}>Edit Profile</Text>
         </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -167,7 +169,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 106, 0, 0.1)',
   },
   content: {
-    padding: 20,
+    padding: 15,
   },
   profileSection: {
     flexDirection: 'row',
@@ -238,7 +240,7 @@ const styles = StyleSheet.create({
   quickStatsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   quickStatItem: {
     flex: 1,
@@ -288,11 +290,11 @@ const styles = StyleSheet.create({
   subscriptionInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    // flex: 1,
   },
   subscriptionTextContainer: {
     marginLeft: 12,
-    flex: 1,
+    // flex: 1,
   },
   subscriptionStatusLabel: {
     color: '#FFF',
@@ -303,6 +305,15 @@ const styles = StyleSheet.create({
   subscriptionStatusValue: {
     color: '#999',
     fontSize: 12,
+  },
+  subscriptionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1C1C1E',
+    padding: 10,
+    borderRadius: 12,
+    marginBottom: 16,
   },
   upgradeButton: {
     flexDirection: 'row',
@@ -324,7 +335,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FF6A00',
-    paddingVertical: 12,
+    padding: 12,
     borderRadius: 12,
     elevation: 2,
     shadowColor: '#FF6A00',

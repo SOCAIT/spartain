@@ -19,6 +19,8 @@ import CustomProgressChart from '../../components/charts/CustomProgressChart';
 import { useScreenTracking } from '../../hooks/useDataCollection';
 import HealthKitDashboard from './HealthKitDashboard';
 import UserProfileCard from '../../components/UserProfileCard';
+import HomeGamificationBanner from '../../components/gamification/HomeGamificationBanner';
+import { getUserStats } from '../../services/GamificationService';
 
 const USER= {
    "username": "Lelouch",
@@ -32,6 +34,7 @@ export default function MainScreen({navigation}) {
   const {authState} = useContext(AuthContext)
   const [bodyMeasurements, setBodyMeasurements] = useState(null);
   const [currentDate, setCurrentDate] = useState('');
+  const [gamificationStats, setGamificationStats] = useState(null);
   
   // Data collection postponed for now
   // const { collectTodayHealthData } = useDataCollection(); 
@@ -113,6 +116,14 @@ export default function MainScreen({navigation}) {
     console.log('MainScreen loaded - data collection should be working');
   }, [])
 
+  useEffect(() => {
+      if (authState?.user?.id) {
+          getUserStats(authState.user.id)
+            .then(data => setGamificationStats(data))
+            .catch(err => console.log('Gamification stats error:', err));
+      }
+  }, [authState?.user?.id]);
+
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
@@ -133,6 +144,12 @@ export default function MainScreen({navigation}) {
 
       {/* User Profile Card Component */}
       <UserProfileCard authState={authState} navigation={navigation} />
+
+      {/* Gamification Banner */}
+      {/* <HomeGamificationBanner 
+        onPress={() => navigation.navigate("Gamification")} 
+        userStats={gamificationStats} 
+      /> */}
 
       {/* Body Measurements */}
       <SectionHeader title={"User Info"} childComponent={<BodyMeasurements navigation={navigation} />} /> {/*  */}
@@ -158,7 +175,7 @@ export default function MainScreen({navigation}) {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Workouts (25)</Text>
           <TouchableOpacity>
-            <MaterialIcons name="more-horiz" size={24} color="#FFF" />
+          <MaterialIcons name="more-horiz" size={24} color="#FFF" />
           </TouchableOpacity>
         </View>
         <CardOverlay />

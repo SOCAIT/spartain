@@ -9,8 +9,24 @@ const MealCardOverlay = ({ meal, navigation, onAddMeal }) => {
   const mealData = meal?.meal || {};
   const mealName = mealData.name || 'Meal';
   
-  // Get quantity - if 0 or undefined, treat as 1
-  const quantity = meal?.quantity && meal.quantity > 0 ? meal.quantity : 1;
+  // Get quantity - parse as float to ensure decimals are preserved
+  const quantity = meal?.quantity ? parseFloat(meal.quantity) : 1;
+  
+  // Format quantity for display (show up to 1 decimal place if needed)
+  const formatQuantity = (qty) => {
+    const num = parseFloat(qty);
+    if (isNaN(num)) return '1';
+    // Check if it's a whole number
+    if (Math.abs(num - Math.round(num)) < 0.001) {
+      return Math.round(num).toString(); // Whole number
+    }
+    // Show one decimal place, removing trailing zeros
+    const formatted = num.toFixed(1);
+    return formatted.replace(/\.0$/, ''); // Remove .0 if it's a whole number
+  };
+  
+  // Debug: log quantity to see what we're getting
+  // console.log('Meal quantity:', meal?.quantity, 'Parsed:', quantity, 'Formatted:', formatQuantity(quantity));
   
   const viewMeal = () => {
     navigation.navigate("MealView", { meal: meal.meal, quantity });
@@ -45,9 +61,16 @@ const MealCardOverlay = ({ meal, navigation, onAddMeal }) => {
         <View style={styles.header}>
           <View style={styles.iconContainer}>
             <MaterialCommunityIcons name="food" size={16} color={COLORS.darkOrange} />
-            {quantity > 1 && (
+            {quantity !== 1 && (
               <View style={styles.quantityBadge}>
-                <Text style={styles.quantityText}>x{quantity}</Text>
+                <Text 
+                  style={styles.quantityText} 
+                  numberOfLines={1} 
+                  allowFontScaling={false}
+                  ellipsizeMode="clip"
+                >
+                  x{formatQuantity(quantity)}
+                </Text>
               </View>
             )}
           </View>
@@ -155,25 +178,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 10,
     position: 'relative',
+    overflow: 'visible',
   },
   
   quantityBadge: {
     position: 'absolute',
     top: -6,
-    right: -8,
+    right: -20,
     backgroundColor: COLORS.darkOrange,
     borderRadius: 8,
-    minWidth: 18,
     height: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
+    paddingLeft: 10,
+    paddingRight: 10,
+    minWidth: 50,
+    zIndex: 10,
   },
   
   quantityText: {
     color: COLORS.white,
     fontSize: 10,
     fontWeight: '700',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    flexShrink: 0,
   },
   
   mealTitle: {

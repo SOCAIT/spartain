@@ -54,10 +54,12 @@ var agent_url = "https://ersebpxznd.eu-west-3.awsapprunner.com" ///chat"
 agent_url = "http://localhost:8080" //chat"
 //agent_url = "https://aws-api.syntrafit.com" //chat"
 //agent_url = "https://fitness-agent-807169666347.europe-west1.run.app" //chat"
-var vision_url = "https://ni9upzgef8.eu-west-3.awsapprunner.com/"
+agent_url = "https://syntrafit-multi-agent-807169666347.europe-west1.run.app"
+var vision_url = "https://ni9upzgef8.eu-west-3.awsapprunner.com"
 var data_collection_url = "http://localhost:8080/" 
  
-//agent_url = "http://localhost:8080/chat"
+agent_url = "http://localhost:8080"
+//agent_url = "https://syntrafit-multi-agent-807169666347.europe-west1.run.app"
 
 // backend_url ="http://34.102.246.190:80/api/"
 

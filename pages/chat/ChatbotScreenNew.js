@@ -19,6 +19,7 @@ import ChatActionTabs from '../../components/chatbot/ChatActionTabs';
 import ChatInput from '../../components/chatbot/ChatInput';
 import PromptModal from '../../components/chatbot/PromptModal';
 import LargeInputModal from '../../components/chatbot/LargeInputModal';
+import { extractNutrition } from '../../helpers/nutritionParser';
 
  
 export default function ChatScreen() {
@@ -149,19 +150,42 @@ const pollJobStatus = (jobId, botMsgId, setMessages, setIsTyping) => {
         activePolls.delete(jobId);
  
         setMessages(m =>
-          m.map(it =>
-            it.id === botMsgId
-              ? {
-                  ...it,
-                  text: data.status === 'complete'
-                    ? data.result
-                    : '❌ Planner failed. Please try again.',
-                  timestamp: new Date().toLocaleTimeString([], {
-                    hour: '2-digit', minute: '2-digit',
-                  }),
-                }
-              : it
-          )
+          m.map(it => {
+            if (it.id !== botMsgId) return it;
+            
+            if (data.status === 'complete') {
+              // DEBUG: Log raw result from job
+              console.log('=== JOB RESULT DEBUG ===');
+              console.log('[DEBUG] Raw data.result:', data.result);
+              console.log('[DEBUG] data.result length:', data.result?.length);
+              
+              // Extract nutrition data using the utility parser
+              const { cleanText, nutritionData } = extractNutrition(data.result);
+              
+              // DEBUG: Log extraction results
+              console.log('[DEBUG] extractNutrition result:');
+              console.log('[DEBUG] - cleanText:', cleanText?.substring(0, 100) + '...');
+              console.log('[DEBUG] - nutritionData:', JSON.stringify(nutritionData));
+              console.log('=== END JOB DEBUG ===');
+              
+              return {
+                ...it,
+                text: cleanText,
+                nutritionData: nutritionData,
+                timestamp: new Date().toLocaleTimeString([], {
+                  hour: '2-digit', minute: '2-digit',
+                }),
+              };
+            } else {
+              return {
+                ...it,
+                text: '❌ Planner failed. Please try again.',
+                timestamp: new Date().toLocaleTimeString([], {
+                  hour: '2-digit', minute: '2-digit',
+                }),
+              };
+            }
+          })
         );
         setIsTyping(false);
         /* stop animated dots */
@@ -283,50 +307,24 @@ useEffect(() => {
           m.map(item => {
             if (item.id !== botMsgId) return item;
 
-            // extract nutrition
-            const extract = (txt) => {
-              /* Debug logging to see exactly what the AI sent */
-              console.log('[Nutrition-Parser] Raw AI text ->', txt);
+            // DEBUG: Log raw AI response
+            console.log('=== AI RESPONSE DEBUG ===');
+            console.log('[DEBUG] Raw item.text:', item.text);
+            console.log('[DEBUG] item.text length:', item.text?.length);
 
-              const match = txt.match(/<nutrition>([\s\S]*?)<\/nutrition>/i);
-              if (!match) {
-                console.log('[Nutrition-Parser] No <nutrition> tag found.');
-                return { clean: txt, data: null };
-              }
-              let data = null;
-              let jsonStr = match[1].trim();
-              
-              // Handle double brackets {{ }} - common LLM output format
-              if (jsonStr.startsWith('{{') && jsonStr.endsWith('}}')) {
-                jsonStr = jsonStr.slice(1, -1); // Remove outer brackets
-                console.log('[Nutrition-Parser] Removed double brackets ->', jsonStr);
-              }
-              
-              try {
-                data = JSON.parse(jsonStr);
-                console.log('[Nutrition-Parser] Parsed nutrition JSON ->', data);
-              } catch (err) {
-                console.log('[Nutrition-Parser] JSON parse error', err);
-                // Try one more approach: extract just the object part
-                const objectMatch = jsonStr.match(/\{[^{}]*\}/);
-                if (objectMatch) {
-                  try {
-                    data = JSON.parse(objectMatch[0]);
-                    console.log('[Nutrition-Parser] Parsed with fallback ->', data);
-                  } catch (e) {
-                    console.log('[Nutrition-Parser] Fallback parse also failed');
-                  }
-                }
-              }
-              const clean = txt.replace(match[0], '').trim();
-              return { clean, data };
-            };
-            const { clean, data } = extract(item.text);
+            // Extract nutrition data using the utility parser
+            const { cleanText, nutritionData } = extractNutrition(item.text);
+
+            // DEBUG: Log extraction results
+            console.log('[DEBUG] extractNutrition result:');
+            console.log('[DEBUG] - cleanText:', cleanText?.substring(0, 100) + '...');
+            console.log('[DEBUG] - nutritionData:', JSON.stringify(nutritionData));
+            console.log('=== END DEBUG ===');
 
             return {
               ...item,
-              text: clean,
-              nutritionData: data,
+              text: cleanText,
+              nutritionData: nutritionData,
               timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             };
           }),

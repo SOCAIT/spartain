@@ -39,7 +39,7 @@ const CustomCarousel = ({items = [], renderItem, navigation, cardHeight = 175}) 
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
         snapToAlignment="start"
-        snapToInterval={260}
+        snapToInterval={262}
         decelerationRate="fast"
         scrollEventThrottle={16}
       />
@@ -68,14 +68,15 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   contentContainer: {
-    paddingHorizontal: 10,
+    paddingLeft: 20,
+    paddingRight: 20,
+    paddingVertical: 4,
     alignItems: 'center',
   },
   itemWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 5,
-    width: 260,
+    marginRight: 12,
   },
   indicatorContainer: {
     flexDirection: 'row',

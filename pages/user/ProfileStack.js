@@ -15,6 +15,7 @@ import SettingsStack from '../settings/SettingsStack';
 import ThreeDLookScan from '../Body/3DLookScan';
 import HealthKitDashboard from './HealthKitDashboard';
 import ForgotPasswordScreen from './ForgotPassword';
+import GamificationScreen from '../gamification/GamificationScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -27,6 +28,7 @@ const ProfileStack = () => {
             }}
         >
             <Stack.Screen name="ProfileView" component={MainScreen} />
+            <Stack.Screen name="Gamification" component={GamificationScreen} />
             <Stack.Screen name="EditProfile" component={EditProfileScreen} />
             <Stack.Screen name="Subscription" component={SubscriptionScreenRevenueCat} />
             <Stack.Screen name="UserReport" component={UserReportScreen} />

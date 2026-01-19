@@ -136,7 +136,7 @@ const DaySelector = ({ selectedDay, onDaySelect, setSelectedDay }) => {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 20,
+    marginBottom: 10,
     paddingHorizontal: Platform.OS === 'ios' ? 16 : 12,
   },
   

@@ -25,7 +25,7 @@ import OnboardingScreen from './pages/onboarding/OnboardingScreen';
 import Wizard from './pages/onboarding/OnboardingWizard';
 import ForgotPasswordScreen from './pages/user/ForgotPassword';
 
-import { runSahhaMinimalTest } from './services/HealthKitService';
+// import { runSahhaMinimalTest } from './services/HealthKitService';
 
 axios.defaults.headers.common['Connection'] = 'close';
 
@@ -168,7 +168,7 @@ function App(): React.JSX.Element {
  
   // First useEffect to retrieve token.
   useEffect(() => {
-    runTest();
+    // runTest();
    
     getValueFor("accessToken", setToken);
     test_api();

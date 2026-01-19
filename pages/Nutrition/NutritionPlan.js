@@ -471,7 +471,7 @@ const NutritionPlan = ({ navigation, route }) => {
         <DaySelector selectedDay={selectedDay} onDaySelect={handleDayChange} />
 
         <Text style={styles.mealsTitle}>Your Nutrition Plans</Text>
-        <View style={{ flexDirection: "row", padding: 10, alignItems:'center' }}>
+        <View style={styles.planSelectorContainer}>
           {isLoading ? (
             <Text style={{color: "#fff"}}>Loading nutrition plans...</Text>
           ) : nutritionPlansData.length > 0 ? (
@@ -498,7 +498,7 @@ const NutritionPlan = ({ navigation, route }) => {
               items={selectedMealPlan.dailymealplandetailSet} 
               renderItem={renderMealCard} 
               navigation={navigation}
-              cardHeight={175}
+              cardHeight={165}
             />
           ) : (
             <View style={{ padding: 20, alignItems: 'center' }}>
@@ -597,11 +597,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
     paddingHorizontal: 20,
-    marginBottom: 10,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  planSelectorContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    paddingVertical: 6,
+    alignItems: 'center',
+    marginBottom: 0,
   },
   carouselContainer: {
-    minHeight: 200,
     marginBottom: 20,
+    marginTop: -4,
   },
   mealCard: {
     flexDirection: 'row',

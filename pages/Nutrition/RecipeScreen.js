@@ -60,30 +60,81 @@ const RecipeScreen = ({navigation, route}) => {
     }
   };
 
-  const ingredientsList = useMemo(() => {
-    if (Array.isArray(meal?.ingredients) && meal.ingredients.length > 0) {
-      return meal.ingredients.filter(Boolean);
+  // Helper function to scale ingredient quantities
+  const scaleIngredient = (ingredient, multiplier) => {
+    if (multiplier === 1) return ingredient;
+    
+    const trimmed = ingredient.trim();
+    
+    // Try to match fraction first (e.g., "1/2 cup flour")
+    const fractionMatch = trimmed.match(/^(\d+)\/(\d+)\s+(.+)$/);
+    if (fractionMatch) {
+      const numerator = parseFloat(fractionMatch[1]);
+      const denominator = parseFloat(fractionMatch[2]);
+      const rest = fractionMatch[3];
+      const fraction = numerator / denominator;
+      const scaledAmount = fraction * multiplier;
+      
+      let formattedAmount;
+      if (scaledAmount % 1 === 0) {
+        formattedAmount = scaledAmount.toString();
+      } else {
+        formattedAmount = scaledAmount.toFixed(2).replace(/\.?0+$/, '');
+      }
+      
+      return `${formattedAmount} ${rest}`;
     }
-    if (typeof meal?.ingredients === 'string' && meal.ingredients.trim().length > 0) {
-      return meal.ingredients
+    
+    // Try to match decimal or whole number at the start (e.g., "1.5 cups", "100g chicken", "2 eggs")
+    const numberMatch = trimmed.match(/^(\d+\.?\d*)\s*(.+)$/);
+    if (numberMatch) {
+      const amount = parseFloat(numberMatch[1]);
+      const rest = numberMatch[2];
+      const scaledAmount = amount * multiplier;
+      
+      let formattedAmount;
+      if (scaledAmount % 1 === 0) {
+        formattedAmount = scaledAmount.toString();
+      } else {
+        formattedAmount = scaledAmount.toFixed(1).replace(/\.0$/, '');
+      }
+      
+      return `${formattedAmount} ${rest}`;
+    }
+    
+    // If no number found at the start, prepend the multiplier
+    return `${multiplier}x ${ingredient}`;
+  };
+
+  const ingredientsList = useMemo(() => {
+    let rawIngredients = [];
+    
+    if (Array.isArray(meal?.ingredients) && meal.ingredients.length > 0) {
+      rawIngredients = meal.ingredients.filter(Boolean);
+    } else if (typeof meal?.ingredients === 'string' && meal.ingredients.trim().length > 0) {
+      rawIngredients = meal.ingredients
         .split(/[\n,]/)
         .map(item => item.replace(/^[•\-]\s*/, '').trim())
         .filter(Boolean);
-    }
-    if (typeof meal?.recipe === 'string' && meal.recipe.toLowerCase().includes('ingredients')) {
+    } else if (typeof meal?.recipe === 'string' && meal.recipe.toLowerCase().includes('ingredients')) {
       const parts = meal.recipe.split(/ingredients:/i);
       if (parts.length > 1) {
-        return parts[1]
+        rawIngredients = parts[1]
           .split(/[\n,]/)
           .map(item => item.replace(/^[•\-]\s*/, '').trim())
           .filter(Boolean);
       }
+    } else if (typeof meal?.recipe === 'string' && meal.recipe.trim().length > 0) {
+      rawIngredients = [meal.recipe.trim()];
     }
-    if (typeof meal?.recipe === 'string' && meal.recipe.trim().length > 0) {
-      return [meal.recipe.trim()];
+    
+    // Scale ingredients by quantity if quantity > 1
+    if (quantity > 1 && rawIngredients.length > 0) {
+      return rawIngredients.map(ingredient => scaleIngredient(ingredient, quantity));
     }
-    return [];
-  }, [meal]);
+    
+    return rawIngredients;
+  }, [meal, quantity]);
 
 
   // Base (per serving) values
@@ -114,9 +165,11 @@ const RecipeScreen = ({navigation, route}) => {
             <Text style={styles.heroBadgeText}>Meal Spotlight</Text>
           </View>
           <View style={styles.calorieContainer}>
-            {quantity > 1 && (
+            {quantity !== 1 && (
               <View style={styles.quantityBadge}>
-                <Text style={styles.quantityText}>x{quantity}</Text>
+                <Text style={styles.quantityText}>
+                  x{quantity % 1 === 0 ? quantity.toString() : quantity.toFixed(1).replace(/\.0$/, '')}
+                </Text>
               </View>
             )}
             <Text style={styles.calorieText}>{totalCalories} kcal</Text>
@@ -124,7 +177,7 @@ const RecipeScreen = ({navigation, route}) => {
         </View>
         <Text style={styles.title}>{meal.name}</Text>
         {!!meal.description && <Text style={styles.description}>{meal.description}</Text>}
-        {quantity > 1 && (
+        {quantity !== 1 && (
           <Text style={styles.perServingNote}>
             {Math.round(baseCalories)} kcal per serving
           </Text>
@@ -157,17 +210,21 @@ const RecipeScreen = ({navigation, route}) => {
         </View>
         <TouchableOpacity style={[styles.primaryButton, styles.addButton]} onPress={addMealToDiary}>
           <Text style={styles.buttonText}>
-            {quantity > 1 ? `Add ${quantity} Servings` : 'Add Intake'}
+            {quantity !== 1 
+              ? `Add ${quantity % 1 === 0 ? quantity.toString() : quantity.toFixed(1).replace(/\.0$/, '')} Servings` 
+              : 'Add Intake'}
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Total Macros (when quantity > 1) */}
-      {quantity > 1 && (
+      {/* Total Macros (when quantity !== 1) */}
+      {quantity !== 1 && (
         <View style={[styles.sectionCard, styles.totalCard]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Total Intake</Text>
-            <Text style={styles.sectionSubtitle}>{quantity} servings</Text>
+            <Text style={styles.sectionSubtitle}>
+              {quantity % 1 === 0 ? quantity.toString() : quantity.toFixed(1).replace(/\.0$/, '')} servings
+            </Text>
           </View>
           <View style={styles.macroGrid}>
             {macros.map(({ label, total }) => (
@@ -200,7 +257,12 @@ const RecipeScreen = ({navigation, route}) => {
         <Modal visible={ingredientsModalVisible} animationType="slide" transparent>
           <View style={styles.modalOverlay}>
             <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Ingredients</Text>
+              <Text style={styles.modalTitle}>
+                Ingredients
+                {quantity !== 1 && (
+                  <Text style={styles.modalSubtitle}> (for {quantity % 1 === 0 ? quantity.toString() : quantity.toFixed(1).replace(/\.0$/, '')} servings)</Text>
+                )}
+              </Text>
               <ScrollView style={styles.modalScroll}>
                 {ingredientsList.map((item, index) => (
                   <View key={`${item}-${index}`} style={styles.ingredientRow}>
@@ -459,6 +521,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 16,
     textAlign: 'center',
+  },
+  modalSubtitle: {
+    color: COLORS.lightGray5,
+    fontSize: 14,
+    fontWeight: '400',
   },
   modalScroll: {
     marginBottom: 20,
